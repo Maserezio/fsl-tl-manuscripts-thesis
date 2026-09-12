@@ -1,0 +1,56 @@
+\chapter{Introduction}
+
+\section{Motivation}
+\label{sec:motivation}
+
+Text line segmentation is an important step in document analysis, since its quality affects downstream text recognition results \cite{fizaine}. For historical manuscripts, this task is particularly challenging for two reasons: physical degradations, such as ink bleeding and faded sections \cite{Rabaev_Litvak_2025}, and varying writing styles both within and between documents, text orientation, and overlapping lines and characters \cite{diva_hisdb}.
+
+Many manuscripts are digitized as images and available online but are not machine-readable; therefore, word searches or text analysis are not possible. Manual labeling is costly and requires expert knowledge and significant time. For example, Tarride et al. \cite{tarride2023handwrittentextrecognitioncrowdsourced} reported that, on average, a crowdsourced annotator took 21 minutes to annotate a full page. Considering the limited availability of labeled data, the few-shot learning (FSL) paradigm can be employed.
+
+FSL is a machine learning paradigm that aims to train models using only a small number of labeled examples per class \cite{fsl}. Unlike traditional supervised learning, which requires fully annotated datasets, FSL is designed to generalize from just a few instances, like 1, 3, 5, or 10. It typically relies on two main strategies: meta-learning, which teaches a model how to learn and quickly adapt to new tasks \cite{finn2017modelagnosticmetalearningfastadaptation}, and transfer learning, where a model pre-trained on a large source dataset is fine-tuned for a specific task using limited labeled data \cite{trans_learning}.
+
+In historical document analysis, large source datasets typically contain about 1,500--3,000 annotated document images, such as cBAD with 3,021 annotated pages \cite{DiemKleberGatos2019} and CATMuS Medieval with 1,705 annotated images \cite{catmus-medieval}. In comparison, ImageNet contains more than 14 million annotated images across over 20,000 object categories \cite{deng2009imagenet}.
+
+For text line segmentation, FSL models with transfer learning can rely on pretrained convolutional encoders, such as ResNet, which have been shown to outperform older backbones like VGG-16 in text line segmentation, as shown by the ResNet-50-based Faster R-CNN \cite{jindal2023fasterrcnn}.
+Vision Transformers (ViTs), as a next step in computer vision, were reported to outperform them on large-scale recognition benchmarks \cite{dosovitskiy2021imageworth16x16words}, even without using a large amount of data for training \cite{touvron2021trainingdataefficientimagetransformers}. A little later, convolutional networks trained using modern methods reported comparable performance  \cite{liu2022convnet2020s}. More recently, vision foundation models have changed the paradigm: pretrained self-supervised on datasets larger than any annotated collection, they report dense features that surpass supervised
+pretraining, and are released with both convolutional and transformer encoders
+derived from the same pretraining procedure \cite{oquab2024dinov2learningrobustvisual, darcet2024visiontransformersneedregisters, dinov3, ranzinger2024amradioagglomerativevisionfoundation}. These developments raise the question of the most effective backbone for transfer learning in few-shot models for historical manuscripts, or whether performance depends more on pretraining and on domain-specific or hybrid pretrained backbones, as reported in the adjacent task of document layout analysis \cite{denardin2025indomain}.
+
+\section{Problem Statement}
+
+Although pretrained encoders are widely used for text line segmentation, it remains unclear which encoder architectures best suit few-shot text line segmentation of historical manuscripts. Modern convolutional networks, vision transformers, and vision foundation models differ not only in architecture but also in model size and pretraining data. Therefore, performance differences reported on general computer vision benchmarks may not apply to historical document analysis, especially in few-shot learning settings, which are sensitive to the amount and characteristics of available training data. Robustness across different manuscripts, writing styles, and document conditions is also important to evaluate. These conditions require further investigation.
+
+\section{Objectives}
+
+The main objective of this thesis is to investigate the influence of the encoder on the performance of few-shot text line segmentation models for historical manuscripts. In particular, the thesis aims to:
+
+\begin{itemize}
+    \item compare convolutional-based and transformer-based encoders across different text line segmentation architectures;
+    \item evaluate encoders of different sizes and with different pretraining strategies, including supervised and self-supervised pretraining;
+    \item analyze the influence of the number of annotated training images on segmentation performance;
+    \item evaluate the robustness of few-shot models across different manuscripts with writing styles and document conditions.
+\end{itemize}
+
+\section{Contributions}
+
+The main contributions of this thesis are:
+
+\begin{itemize}
+    \item a systematic comparison of modern convolutional and Transformer-based encoders for few-shot text line segmentation of historical manuscripts across different downstream approaches and evaluation settings;
+    \item a state-of-the-art-level few-shot text line segmentation model evaluated on a historical manuscript dataset;
+    \item a lightweight model pretrained on manuscript data for efficient deployment;
+    \item a robustly pretrained model designed to generalize across different manuscripts.
+\end{itemize}
+
+\section{Thesis Structure}
+
+The work is organized as follows:
+
+\begin{itemize}
+    \item Chapter 2 provides the theoretical background on text line segmentation, describes few-shot learning and its methods, and reviews recent supervised and unsupervised approaches, identifying gaps for research questions.
+    \item Chapter 3 formulates research questions
+    \item Chapter 4 describes the methodology for solving the research questions, FSL model architectures and parameters (such as backbone weights, postprocessing algorithms, where applicable), experimental design, and text line detection metrics.
+    \item Chapter 5 contains quantitative and qualitative results for experiments described in Chapter 4, comparing backbones across tasks of semantic segmentation, object detection, and instance segmentation across various encoder sizes and pretraining options.
+    \item Chapter 6 interprets the results, draws conclusions, and answers the research questions.
+    \item Chapter 7 summarizes findings and proposes new ideas for extending the few-shot learning paradigm for text line segmentation in historical manuscripts.
+\end{itemize}

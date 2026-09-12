@@ -1,0 +1,140 @@
+\chapter{Theoretical Background and Related Work}
+\label{lit_rec}
+
+This chapter reviews the domain of historical document analysis and the role of text line segmentation within it,
+expands on the theses mentioned in Section \ref{sec:motivation}, describes Few-shot learning essentials, explains how it intersects with text line segmentation in historical documents, and formulates the research gap.
+
+\section{Historical Document Analysis}
+
+Historical document analysis is a research field focused on digitizing, processing, and extracting information from historical documents, whether for content extraction or metadata analysis, such as authorship identification.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{graphics/Screenshot from 2026-06-21 13-06-12.png}
+    \caption{The steps in a conventional Historical Document Processing workflow for both handwritten and printed documents, reproduced from \cite{DBLP:journals/corr/abs-2002-06300}}
+    \label{fig:da_steps}
+\end{figure}
+
+Historical document analysis typically involves multiple stages, as shown in Figure \ref{fig:da_steps}. In the pipeline, historical materials pose several challenges because their visual appearance and layout can differ markedly between collections. Frequent issues include uneven line spacing, different text orientations, notes in the margins, stains, bleed-through, and characters or text lines that touch or overlap \cite{Rabaev_Litvak_2025}. Figure \ref{fig:hda_challenges} shows general layout- and degradation-related problems, along with examples of overlapping and deteriorated text line regions.
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{graphics/deg.png}
+        \caption{Challenges in historical document layout analysis: irregular spaces, multi-oriented and fluctuating lines (a); marginal notes (a, c); stains (b, d); touching and connected characters (a, d); bleed-through (c), reproduced from \cite{Rabaev_Litvak_2025}.}
+        \label{fig:hda_general_challenges}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{graphics/cb55_deg.png}
+        \caption{Examples of overlapping and degraded text line regions from DIVA-HisDB \cite{diva_hisdb} CB55 subset, reproduced from \cite{Beghoura2026-dp}.}
+        \label{fig:hda_line_challenges}
+    \end{subfigure}
+
+    \caption{Examples of challenges in text line segmentation in historical documents.}
+    \label{fig:hda_challenges}
+\end{figure}
+
+Machine learning methods are used at every stage of the processing pipeline. In binarization, machine learning methods generally outperform traditional techniques, even under image degradation and acquisition issues such as uneven lighting; however, they have limitations, including reliance on large, diverse datasets, computational cost, and poor generalization to entirely new document degradations and styles \cite{jimaging11050133}. For document layout analysis, single-branch fully convolutional networks remain the main approach \cite{wu2025hooknet}. However, their reliance on pixel-wise labeled data remains a major limitation, since producing precise ground-truth annotations for historical manuscripts is time-consuming and costly \cite{De_Nardin_2023}. In HTR, current state-of-the-art approaches are largely transformer-based and tend to perform better on scripts whose handwriting style is similar to what the model was trained on. For instance, Titan and TrOCR-f often perform better out of the box on Latin-script materials, even though script-specific systems trained or fine-tuned on non-Latin data can ultimately achieve higher performance \cite{romein2025htr}. In this task, too, limited labeled domain data remains a key challenge \cite{Li2025}.
+
+As shown in Figure \ref{fig:da_steps}, text line segmentation is the last step in the preprocessing phase; the quality of segmentation affects the performance of the downstream HTR task. Fizaine et al. measured this effect by comparing two segmentation models with postprocessing, using the same TrOCR \cite{DBLP:journals/corr/abs-2109-10282} detector fine-tuned on the DRoSb dataset, which they also used to train the segmentation models. As shown in Table \ref{tab:fizaine_ap_htr}, the Mask R-CNN \cite{he2017maskrcnn} model has better object-level metrics and also outperforms on the text recognition task, with a lower character error rate (CER).
+
+\begin{table}[h]
+    \centering
+    \caption{Object-level text line segmentation performance and downstream HTR performance reported by Fizaine et al. \cite{fizaine}.}
+    \label{tab:fizaine_ap_htr}
+    \begin{tabular}{lcccc}
+        \hline
+        Model & AP@0.5 & AP@0.75 & AP@[0.5,0.95] & CER (\%) \\
+        \hline
+        Doc-UFCN \cite{boillet2021docufcn}
+        & 0.62 & 0.52 & 0.50 & 15.3 \\
+        Mask R-CNN \cite{he2017maskrcnn}
+        & 0.96 & 0.85 & 0.78 & 4.2 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Text line segmentation is the main focus of this thesis and is discussed in Section~\ref{sec:tls}.
+
+\section{Text Line Segmentation}
+\label{sec:tls}
+
+Text line segmentation aims to identify and separate individual text lines in a historical document image. Depending on the labeling method, a text line can be represented as a bounding box, a set of foreground pixels, a polygon surrounding the line, or a baseline. Figure \ref{fig:line_representation} illustrates how different representations describe the same handwritten text lines \cite{Textline_maskrcnn}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{graphics/tls_r.png}
+    \caption{Different representations of a handwritten text line, reproduced from Islam et al. \cite{Textline_maskrcnn}.}
+    \label{fig:line_representation}
+\end{figure}
+
+\paragraph{Unsupervised Methods}extract individual lines without manually annotated training data, which is very helpful when labeled data for historical documents is limited. The most recent works rely on handcrafted heuristics applied to document structure, such as including elongation analysis for line slicing \cite{sathik2021}, seam carving with specifically designed cost functions \cite{nguyen2022effective}, statistical gap analysis with unsupervised parameter estimation \cite{mukherjee2022unsupervised}, and clustering-based blob-line generation combined with energy minimization \cite{droby2022unsupervised}. Although supervised models are the minority of released models in recent years, as Rabaev et al. \cite{Rabaev_Litvak_2025} report, unsupervised methods achieve performance comparable to and even greater than state-of-the-art models, as can be seen from Figure \ref{tab:unsupervised_diva_metrics}. However, their strong performance sometimes depends on the specific assumptions and characteristics of the document collections they are developed for, thus raising the question of whether such methods are robust. Hu et al. \cite{hu2021uchen} propose a method targeted specifically at Uchen Tibetan documents. In contrast, Nguyen et al. \cite{nguyen2022effective} and Droby et al. \cite{droby2022unsupervised} report strong, consistent results across different manuscript families. Additionally, these methods are usually computationally heavy, taking from 4 \cite{droby2022unsupervised} to approximately 30 minutes per page, depending on parameter configuration \cite{DBLP:journals/corr/abs-2003-08632}.
+
+\begin{table}[H]
+    \centering
+    \caption{Comparison of unsupervised and supervised text line segmentation methods on the DIVA-HisDB \cite{diva_hisdb} dataset.}
+    \label{tab:unsupervised_diva_metrics}
+    \begin{tabular}{llcc}
+        \hline
+        Model & Method & Pixel IU & Line IU \\
+        \hline
+        Barakat et al. \cite{DBLP:journals/corr/abs-2003-08632}
+        & Unsupervised & 97.50 & \textbf{99.46} \\
+
+        Nguyen et al. \cite{nguyen2022effective}
+        & Unsupervised & \textbf{99.36} & 98.86 \\
+
+        Mask R-CNN \cite{Textline_maskrcnn}
+        & Supervised & 96.00 & 98.40 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Supervised Methods} learn text line representations directly from annotated data, allowing them to capture visual characteristics that don't require creating any heuristics. In a recent survey \cite{Rabaev_Litvak_2025},
+supervised and hybrid approaches dominate text line segmentation, with more instance segmentation methods published in recent years.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{graphics/sup_m.png}
+    \caption{TLS for historical manuscripts by approach over time, reproduced from Rabaev et al. \cite{Rabaev_Litvak_2025}.}
+    \label{fig:methods}
+\end{figure}
+
+Supervised text line segmentation models fall into two categories: fully connected networks with or without post-processing, and instance segmentation models. Conventional CNN-based approaches, such as Doc-UFCN, formulate the task as semantic segmentation and predict a common foreground mask for all text lines \cite{boillet2021docufcn}. More recent hybrid approaches, such as APAU-Net, combine CNN-based segmentation with explicit geometric priors describing the expected shape and orientation of text lines \cite{Beghoura2026-dp}. Instance-segmentation methods, such as Mask R-CNN, instead represent each text line as a separate object and predict an individual mask for every detected line \cite{islam2023line}.
+
+\subparagraph{Robustness} across different scripts and document collections has received comparatively limited attention. Islam et al. \cite{islam2023line} provide one of the broader evaluations, testing their Mask R-CNN-based approach on multiple datasets containing different scripts, layouts, writing orientations, and inter-line spacing. They additionally show that a model trained on Urdu documents can generalize to other scripts, indicating that instance-level text line representations can retain useful cross-script generalization.
+
+\subparagraph{Learning on a Small Amount of Data}
+Learning text line segmentation from only a few annotated pages has only recently become an explicit research setting. Zottin et al. \cite{zottin2025exploring} investigate several semantic segmentation architectures under a few-shot setting for ancient manuscripts. The FEST competition later formalized this setting by restricting training to only three annotated pages per manuscript \cite{fest2025}. Sterzinger et al. \cite{sterzinger2025fewshot} follow the same low-data setting and propose a connectivity-aware UNet++ model with a pretrained ResNet encoder. These works show that few-shot text line segmentation is feasible, although the number of dedicated studies remains limited compared with conventional fully supervised approaches.
+
+\section{Few-shot Learning}
+\label{sec:fsl}
+
+Few-shot learning (FSL) refers to learning a task from a very small amount of labeled data \cite{fsl}. In contrast to conventional supervised settings, where models are typically trained on comparatively large annotated datasets, few-shot methods aim to achieve useful generalization from only a small support set. In image segmentation, a ``shot'' therefore does not necessarily correspond to a single example of a class, but may instead refer to a small number of fully annotated images or document pages used for training.
+
+This setting is particularly relevant to historical document analysis, where the creation of pixel-precise annotations is time-consuming and often requires expert knowledge. De Nardin et al. \cite{De_Nardin_2023}, for example, proposed a few-shot framework for historical document layout analysis and obtained performance close to fully supervised approaches while using only six annotated pages instead of the complete 60-page training set. Similar low-data settings have only recently been studied explicitly for historical text line segmentation. Zottin et al. \cite{zottin2025exploring} investigated several semantic segmentation architectures using only a small number of annotated manuscript pages, while the FEST benchmark later formalized few-shot text line segmentation using only three annotated training pages per manuscript. Sterzinger et al. \cite{sterzinger2025fewshot} adopted the same three-page setting and showed that a lightweight UNet++ model with a pretrained ResNet encoder can achieve strong segmentation performance under severe data scarcity.
+
+Few-shot learning can be approached in different ways. Meta-learning methods attempt to learn how to adapt rapidly to new tasks from a small support set \cite{finn2017modelagnosticmetalearningfastadaptation}. Another widely used strategy is transfer learning, where knowledge learned from a larger source dataset is reused for a target task with limited labeled data. In deep visual models, transfer learning is commonly implemented by initializing part or all of the network from a pretrained model and subsequently fine-tuning it on the target dataset.
+
+This thesis focuses on the transfer-learning setting. In particular, the segmentation architecture is supplied with a pretrained encoder or backbone, while the task-specific segmentation components are trained or fine-tuned using the limited annotated manuscript data. This design is already used in recent historical text line segmentation systems. For example, SegHist uses an ImageNet-pretrained ResNet-50 feature extractor \cite{hu2024seghist}, while Sterzinger et al. evaluate ImageNet-pretrained ResNet encoders within UNet++ for few-shot text line segmentation \cite{sterzinger2025fewshot}. At the same time, recent work in historical document analysis indicates that the source of pretraining can substantially affect transfer performance, and that pretraining on document-domain data can be more effective than generic natural-image pretraining under strong domain shift \cite{denardin2025indomain}.
+
+The following subsection therefore focuses on transfer learning through pretrained visual backbones and discusses how the choice of encoder architecture and pretraining strategy can affect performance in the few-shot setting.
+
+
+\subsection{Transfer Learning using Pretrained Backbones}
+
+A deep segmentation model can typically be separated into a feature extractor, commonly referred to as the encoder or backbone, and task-specific components that transform the extracted features into segmentation predictions. Transfer learning allows the feature extractor to reuse representations learned from a large source dataset instead of learning them entirely from the limited target data. This is particularly attractive in few-shot segmentation, where training a high-capacity encoder from scratch using only a few annotated manuscript pages can lead to poor generalization.
+
+Pretrained convolutional encoders have been used extensively in document analysis. For historical text line processing, Wodlinger and Sablatnig replaced the standard U-Net encoder with an ImageNet-pretrained ResNet-50 \cite{wodlinger2021baseline}, while SegHist employs an ImageNet-pretrained ResNet-50 together with a feature pyramid network \cite{hu2024seghist}. More recently, Sterzinger et al. directly evaluated ImageNet-pretrained ResNet encoders of different sizes for few-shot text line segmentation and selected ResNet-34 for their final UNet++ model \cite{sterzinger2025fewshot}. These works demonstrate that reuse of a pretrained feature extractor is already a common strategy for reducing the amount of task-specific training required in historical document segmentation.
+
+However, the effectiveness of transfer learning depends not only on the architecture of the encoder but also on how and on which data it was pretrained. Generic supervised pretraining on datasets such as ImageNet has traditionally been widely used, while object-detection models commonly rely on checkpoints pretrained on datasets such as COCO. Recent work on historical document analysis additionally shows that in-domain pretraining can provide stronger transfer than generic natural-image pretraining when the source and target domains differ substantially \cite{denardin2025indomain}.
+
+At the same time, modern encoder architectures have diversified beyond conventional ResNet-based CNNs. Vision Transformers demonstrated strong performance on large-scale vision tasks, while modern convolutional architectures such as ConvNeXt showed that carefully redesigned CNNs remain competitive with Transformer-based models \cite{liu2022convnet,woo2023convnextv2}. More recently, large self-supervised vision models have provided general-purpose pretrained representations for dense prediction. DINOv2 provides transferable Vision Transformer features learned from LVD-142M \cite{oquab2023dinov2learningrobustvisual}, whereas DINOv3 extends this family with both Vision Transformer and ConvNeXt encoders trained within the same self-supervised framework \cite{simeoni2025dinov3}. AM-RADIO similarly investigates multiple backbone families under a common multi-teacher distillation strategy \cite{ranzinger2024amradio}.
+
+These developments make it possible to investigate encoder architecture and pretraining strategy as separate factors. However, recent few-shot historical text line segmentation studies have primarily relied on conventional CNN encoders, and a systematic comparison between modern convolutional, Transformer-based, and vision-foundation-model backbones under the same few-shot segmentation setting remains limited. This forms the basis for the experimental comparison conducted in this thesis.
+
+
+\section{Summary of Studies and Reseach Gap}

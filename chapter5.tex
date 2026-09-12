@@ -1,0 +1,336 @@
+\chapter{Experiments \& Results}
+
+\todo[inline]{1. Simple segmentation(U-net, Segformer, backbones, qualitative asessment}
+\todo[inline]{2. Two-stage(Yolo vs DETR)}
+\todo[inline]{2. Two-stage detector pretraining}
+\todo[inline]{3. Mask2former}
+\todo[inline]{4. Effect on number of shots(U-Net, two-stage, mask2former}
+\todo[inline]{5. Cross validation results)}
+
+\section{RQ1: CNN vs. ViT Backbone Comparison}
+
+\subsection{Semantic Segmentation}
+
+% Latin14396
+\begin{table}[H]
+    \centering
+    \caption{Results on the Latin14396 subset.}
+    \label{tab:latin14396}
+    \begin{tabular}{llclccccc}
+        \hline
+        Encoder & Init & Bucket & Params, M &
+        Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        vit\_tiny        & imagenet & XS & 5.5  & \textbf{0.85} & 0.96 & 0.95 & 0.93 & 0.94 \\
+        vit\_tiny        & random   & XS & 5.5  & \textbf{0.85} & 0.97 & 0.95 & 0.91 & 0.93 \\
+        convnext\_femto  & imagenet & XS & 4.83 & 0.84 & 0.97 & 0.95 & 0.95 & 0.95 \\
+        convnext\_femto  & random   & XS & 4.83 & 0.83 & 0.96 & 0.94 & 0.89 & 0.91 \\
+        pvt\_v2\_b0      & imagenet & XS & 3.41 & 0.84 & 0.97 & 0.95 & 0.94 & 0.95 \\
+        pvt\_v2\_b0      & random   & XS & 3.41 & 0.83 & 0.96 & 0.94 & 0.89 & 0.91 \\
+        convnext\_pico   & imagenet & S  & 8.53 & 0.84 & 0.97 & 0.95 & 0.94 & 0.94 \\
+        convnext\_pico   & random   & S  & 8.53 & 0.83 & 0.96 & 0.94 & 0.91 & 0.92 \\
+        pvt\_v2\_b1      & imagenet & S  & 13.5 & 0.84 & 0.97 & \textbf{0.96} & 0.95 & \textbf{0.96} \\
+        pvt\_v2\_b1      & random   & S  & 13.5 & 0.83 & 0.96 & 0.93 & 0.89 & 0.91 \\
+        convnext\_tiny   & dinov3   & M  & 27.8 & 0.83 & 0.96 & 0.94 & 0.93 & 0.93 \\
+        convnext\_tiny   & imagenet & M  & 27.8 & \textbf{0.85} & 0.97 & \textbf{0.96} & \textbf{0.96} & \textbf{0.96} \\
+        convnext\_tiny   & random   & M  & 27.8 & 0.84 & 0.96 & 0.94 & 0.90 & 0.92 \\
+        vit\_small       & dinov3   & M  & 21.7 & \textbf{0.85} & \textbf{0.98} & 0.95 & 0.95 & 0.95 \\
+        vit\_small       & imagenet & M  & 21.7 & \textbf{0.85} & 0.96 & 0.95 & 0.94 & 0.94 \\
+        vit\_small       & random   & M  & 21.7 & \textbf{0.85} & 0.96 & 0.95 & 0.92 & 0.93 \\
+        pvt\_v2\_b2      & imagenet & M  & 24.9 & 0.84 & 0.97 & \textbf{0.96} & 0.95 & 0.95 \\
+        pvt\_v2\_b2      & random   & M  & 24.9 & 0.83 & 0.96 & 0.94 & 0.89 & 0.91 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+% Latin2
+\begin{table}[h]
+    \centering
+    \caption{Results on the Latin2 subset.}
+    \label{tab:latin2}
+    \begin{tabular}{llclccccc}
+        \hline
+        Encoder & Init & Bucket & Params, M &
+        Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        vit\_tiny        & imagenet & XS & 5.5  & 0.81 & 0.96 & 0.86 & 0.85 & 0.85 \\
+        vit\_tiny        & random   & XS & 5.5  & 0.81 & 0.96 & 0.83 & 0.84 & 0.83 \\
+        convnext\_femto  & imagenet & XS & 4.83 & 0.81 & 0.96 & 0.87 & 0.88 & 0.87 \\
+        convnext\_femto  & random   & XS & 4.83 & 0.79 & 0.95 & 0.82 & 0.76 & 0.78 \\
+        pvt\_v2\_b0      & imagenet & XS & 3.41 & 0.80 & 0.96 & 0.86 & 0.87 & 0.86 \\
+        pvt\_v2\_b0      & random   & XS & 3.41 & 0.79 & 0.96 & 0.84 & 0.80 & 0.82 \\
+        convnext\_pico   & imagenet & S  & 8.53 & \textbf{0.83} & 0.97 & \textbf{0.89} & \textbf{0.92} & \textbf{0.90} \\
+        convnext\_pico   & random   & S  & 8.53 & 0.79 & 0.94 & 0.83 & 0.78 & 0.80 \\
+        pvt\_v2\_b1      & imagenet & S  & 13.5 & 0.82 & 0.97 & 0.88 & 0.91 & 0.89 \\
+        pvt\_v2\_b1      & random   & S  & 13.5 & 0.80 & 0.94 & 0.83 & 0.77 & 0.80 \\
+        convnext\_tiny   & dinov3   & M  & 27.8 & 0.81 & 0.97 & 0.87 & 0.89 & 0.88 \\
+        convnext\_tiny   & imagenet & M  & 27.8 & 0.82 & 0.97 & 0.88 & 0.89 & 0.88 \\
+        convnext\_tiny   & random   & M  & 27.8 & 0.80 & 0.94 & 0.84 & 0.78 & 0.81 \\
+        vit\_small       & dinov3   & M  & 21.7 & \textbf{0.83} & 0.97 & 0.88 & 0.91 & 0.89 \\
+        vit\_small       & imagenet & M  & 21.7 & 0.81 & 0.96 & 0.86 & 0.81 & 0.83 \\
+        vit\_small       & random   & M  & 21.7 & 0.82 & \textbf{0.98} & 0.86 & 0.85 & 0.85 \\
+        pvt\_v2\_b2      & imagenet & M  & 24.9 & 0.81 & 0.97 & 0.87 & 0.89 & 0.88 \\
+        pvt\_v2\_b2      & random   & M  & 24.9 & 0.79 & 0.93 & 0.82 & 0.75 & 0.78 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+% Syr341
+\begin{table}[H]
+    \centering
+    \caption{Results on the Syr341 subset.}
+    \label{tab:syr341}
+    \begin{tabular}{llclccccc}
+        \hline
+        Encoder & Init & Bucket & Params, M &
+        Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        vit\_tiny        & imagenet & XS & 5.5  & 0.73 & 0.90 & 0.75 & 0.75 & 0.75 \\
+        vit\_tiny        & random   & XS & 5.5  & \textbf{0.74} & 0.90 & 0.72 & 0.71 & 0.71 \\
+        convnext\_femto  & imagenet & XS & 4.83 & 0.69 & 0.88 & 0.74 & 0.77 & 0.75 \\
+        convnext\_femto  & random   & XS & 4.83 & 0.71 & 0.88 & 0.58 & 0.55 & 0.57 \\
+        pvt\_v2\_b0      & imagenet & XS & 3.41 & 0.73 & 0.90 & 0.76 & 0.78 & 0.77 \\
+        pvt\_v2\_b0      & random   & XS & 3.41 & 0.71 & 0.88 & 0.68 & 0.66 & 0.67 \\
+        convnext\_pico   & imagenet & S  & 8.53 & 0.72 & 0.89 & \textbf{0.77} & 0.78 & 0.77 \\
+        convnext\_pico   & random   & S  & 8.53 & 0.72 & 0.88 & 0.69 & 0.67 & 0.67 \\
+        pvt\_v2\_b1      & imagenet & S  & 13.5 & 0.71 & 0.89 & \textbf{0.77} & \textbf{0.79} & \textbf{0.78} \\
+        pvt\_v2\_b1      & random   & S  & 13.5 & 0.73 & 0.90 & 0.71 & 0.69 & 0.70 \\
+        convnext\_tiny   & dinov3   & M  & 27.8 & 0.71 & 0.88 & 0.75 & 0.78 & 0.77 \\
+        convnext\_tiny   & imagenet & M  & 27.8 & 0.72 & 0.89 & \textbf{0.77} & \textbf{0.79} & \textbf{0.78} \\
+        convnext\_tiny   & random   & M  & 27.8 & 0.72 & 0.89 & 0.68 & 0.66 & 0.67 \\
+        vit\_small       & dinov3   & M  & 21.7 & \textbf{0.74} & \textbf{0.92} & 0.74 & 0.75 & 0.75 \\
+        vit\_small       & imagenet & M  & 21.7 & 0.73 & 0.90 & 0.74 & 0.75 & 0.75 \\
+        vit\_small       & random   & M  & 21.7 & 0.72 & 0.89 & 0.70 & 0.70 & 0.70 \\
+        pvt\_v2\_b2      & imagenet & M  & 24.9 & 0.72 & 0.89 & \textbf{0.77} & \textbf{0.79} & \textbf{0.78} \\
+        pvt\_v2\_b2      & random   & M  & 24.9 & 0.73 & 0.90 & 0.69 & 0.67 & 0.68 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+% Average over all subsets
+\begin{table}[H]
+    \centering
+    \caption{Average results across Latin14396, Latin2, and Syr341 subsets.}
+    \label{tab:udiads_average}
+    \begin{tabular}{llclccccc}
+        \hline
+        Encoder & Init & Bucket & Params, M &
+        Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        vit\_tiny        & imagenet & XS & 5.5  & 0.80 & 0.94 & 0.85 & 0.84 & 0.85 \\
+        vit\_tiny        & random   & XS & 5.5  & 0.80 & 0.94 & 0.83 & 0.82 & 0.82 \\
+        convnext\_femto  & imagenet & XS & 4.83 & 0.78 & 0.94 & 0.85 & 0.87 & 0.86 \\
+        convnext\_femto  & random   & XS & 4.83 & 0.78 & 0.93 & 0.78 & 0.73 & 0.75 \\
+        pvt\_v2\_b0      & imagenet & XS & 3.41 & 0.79 & 0.94 & 0.86 & 0.86 & 0.86 \\
+        pvt\_v2\_b0      & random   & XS & 3.41 & 0.78 & 0.93 & 0.82 & 0.78 & 0.80 \\
+        convnext\_pico   & imagenet & S  & 8.53 & 0.80 & 0.94 & \textbf{0.87} & \textbf{0.88} & 0.87 \\
+        convnext\_pico   & random   & S  & 8.53 & 0.78 & 0.93 & 0.82 & 0.79 & 0.80 \\
+        pvt\_v2\_b1      & imagenet & S  & 13.5 & 0.79 & 0.94 & \textbf{0.87} & \textbf{0.88} & \textbf{0.88} \\
+        pvt\_v2\_b1      & random   & S  & 13.5 & 0.79 & 0.93 & 0.82 & 0.78 & 0.80 \\
+        convnext\_tiny   & dinov3   & M  & 27.8 & 0.78 & 0.94 & 0.85 & 0.87 & 0.86 \\
+        convnext\_tiny   & imagenet & M  & 27.8 & 0.80 & 0.94 & \textbf{0.87} & \textbf{0.88} & 0.87 \\
+        convnext\_tiny   & random   & M  & 27.8 & 0.79 & 0.93 & 0.82 & 0.78 & 0.80 \\
+        vit\_small       & dinov3   & M  & 21.7 & \textbf{0.81} & \textbf{0.96} & 0.86 & 0.87 & 0.86 \\
+        vit\_small       & imagenet & M  & 21.7 & 0.80 & 0.94 & 0.85 & 0.83 & 0.84 \\
+        vit\_small       & random   & M  & 21.7 & 0.80 & 0.94 & 0.84 & 0.82 & 0.83 \\
+        pvt\_v2\_b2      & imagenet & M  & 24.9 & 0.79 & 0.94 & \textbf{0.87} & \textbf{0.88} & 0.87 \\
+        pvt\_v2\_b2      & random   & M  & 24.9 & 0.78 & 0.93 & 0.82 & 0.77 & 0.79 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+% Average by parameter bucket
+\begin{table}[H]
+    \centering
+    \caption{Average results by model size across the entire U-DIADS-TL dataset.}
+    \label{tab:udiads_bucket_average}
+    \begin{tabular}{lcccccc}
+        \hline
+        Bucket & Params, M & Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        XS & 4.58  & \textbf{0.79} & \textbf{0.94 }& 0.83 & 0.82 & 0.82 \\
+        S  & 11.02 & \textbf{0.79} & \textbf{0.94} & \textbf{0.85} & 0.83 & \textbf{0.84} \\
+        M  & 24.79 & \textbf{0.79} & \textbf{0.94} & \textbf{0.85} & \textbf{0.84} & \textbf{0.84} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Average results by architecture family and initialization across the entire U-DIADS-TL dataset.}
+    \label{tab:udiads_family_init_average}
+    \begin{tabular}{llcccccc}
+        \hline
+        Model & Init & Params, M & Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        ViT      & dinov3   & 21.70 & \textbf{0.81} & \textbf{0.96} & 0.86 & 0.87 & 0.86 \\
+        ViT      & imagenet & 13.60 & 0.80 & 0.94 & 0.85 & 0.84 & 0.84 \\
+        ViT      & random   & 13.60 & 0.80 & 0.94 & 0.84 & 0.82 & 0.82 \\
+        \hline
+        PVT      & imagenet & 13.94 & 0.79 & 0.94 & \textbf{0.87} & 0.87 & \textbf{0.87} \\
+        PVT      & random   & 13.94 & 0.78 & 0.93 & 0.82 & 0.78 & 0.80 \\
+        \hline
+        ConvNeXt & dinov3   & 27.80 & 0.78 & 0.94 & 0.85 & 0.87 & 0.86 \\
+        ConvNeXt & imagenet & 13.72 & 0.79 & 0.94 & 0.86 & \textbf{0.88} & \textbf{0.87} \\
+        ConvNeXt & random   & 13.72 & 0.78 & 0.93 & 0.81 & 0.77 & 0.78 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+% Average by parameter bucket and initialization
+\begin{table}[H]
+    \centering
+    \caption{Average results by model size and initialization across the entire U-DIADS-TL dataset.}
+    \label{tab:udiads_bucket_init_average}
+    \begin{tabular}{llcccccc}
+        \hline
+        Bucket & Init & Params, M & Pixel IU & Line IU & DR & RA & FM \\
+        \hline
+        XS & imagenet & 4.58  & 0.79 & 0.94 & 0.85 & 0.86 & 0.86 \\
+        XS & random   & 4.58  & 0.79 & 0.93 & 0.81 & 0.78 & 0.79 \\
+        \hline
+        S  & imagenet & 11.02 & 0.80 & 0.94 & \textbf{0.87} & \textbf{0.88} & \textbf{0.88} \\
+        S  & random   & 11.02 & 0.79 & 0.93 & 0.82 & 0.79 & 0.80 \\
+        \hline
+        M  & dinov3   & 24.75 & 0.80 & \textbf{0.95} & 0.86 & 0.87 & 0.86 \\
+        M  & imagenet & 24.80 & \textbf{0.80} & 0.94 & 0.86 & 0.86 & 0.86 \\
+        M  & random   & 24.80 & 0.79 & 0.93 & 0.83 & 0.79 & 0.81 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Average text-line segmentation performance on the three
+    U-DIADS-TL subsets.}
+    \label{tab:udiads_simple_segmentation_comparison}
+    \begin{tabular}{lccccc}
+        \toprule
+        Method & Pixel IU & Line IU & DR & RA & FM \\
+        \midrule
+        PVT-v2-B1 + ImageNet pretrain
+        & 0.79 & 0.94 & \textbf{0.87} & \textbf{0.88} & \textbf{0.88} \\
+        ConvNeXt-Tiny + ImageNet pretrain
+        & \textbf{0.80} & 0.94 & \textbf{0.87} & \textbf{0.88} & 0.87 \\
+        PERO Team (FEST 2025 winner) \cite{Zottin_2025_FEST}
+        & \textbf{0.80} & \textbf{0.96} & 0.82 & 0.85 & 0.83 \\
+        Connectivity-Aware UNet++ \cite{sterzinger2025fewshot}
+        & 0.71 & 0.77 & 0.74 & 0.53 & 0.61 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Two-Stage Semantic Segmentation Baseline}
+
+\subsubsection{Knowledge distillation and pre-training detector}
+
+\subsection{Instance segmentation}
+
+\begin{table}[H]
+    \centering
+    \caption{Two-stage results on U-DIADS-TL (U-Net backbone)}
+    \label{tab:segm_udiads}
+    \begin{tabular}{lccccc}
+        \toprule
+        Manuscript & Pixel IU & Line IU & DR & RA & FM \\
+        \midrule
+        Latin14396 & 0.885 & 0.943 & 0.973 & 0.968 & 0.970 \\
+        Latin2     & 0.838 & 0.859 & 0.933 & 0.911 & 0.920 \\
+        Syr341     & 0.801 & 0.859 & 0.933 & 0.915 & 0.923 \\
+        \midrule
+        Average    & 0.842 & 0.887 & 0.946 & 0.932 & 0.938 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Two-Stage Object Detection and Segmentation Model}
+
+\begin{table}[H]
+    \centering
+    \caption{Object detection model baseline results on DIVA-HisDB.}
+    \label{tab:objdet_baseline_diva}
+    \begin{tabular}{lccccc}
+        \toprule
+        Manuscript & Line IoU & Pixel IoU & DR & RA & FM \\
+        \midrule
+        CB55  & 0.83 & 0.85 & 0.93 & 0.82 & 0.87 \\
+        CS18  & 0.86 & 0.85 & 0.92 & 0.82 & 0.87 \\
+        CS863 & 0.73 & 0.78 & 0.74 & 0.57 & 0.65 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Two-stage pipeline results on DIVA-HisDB CB55.}
+    \label{tab:twostage_cb55}
+    \begin{tabular}{lccccc}
+        \toprule
+        Model & Line IoU & Pixel IoU & DR & RA & FM \\
+        \midrule
+        CNN baseline           & 0.81 & 0.82 & 0.95 & 0.80 & 0.86 \\
+        CNN refined            & 0.89 & 0.88 & 0.92 & 0.89 & 0.90 \\
+        Transformer baseline   & 0.75 & 0.75 & 0.88 & 0.79 & 0.83 \\
+        Transformer refined    & 0.93 & 0.92 & 0.97 & 0.95 & 0.96 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Pre-training Object Detection Model}
+
+\begin{table}[H]
+    \centering
+    \caption{Ablation study results on DIVA-HisDB subsets.}
+    \label{tab:ablation_diva}
+    \begin{tabular}{lccccc}
+        \toprule
+        Subset & Line IoU & Pixel IoU & DR & RA & FM \\
+        \midrule
+        CB55            & 0.98 & 0.92 & 0.95 & 0.96 & 0.95 \\
+        CB55 finetuned  & 0.52 & 0.68 & 0.31 & 0.35 & 0.33 \\
+        CS18            & 0.98 & 0.94 & 0.86 & 0.87 & 0.87 \\
+        CS18 finetuned  & 0.60 & 0.65 & 0.01 & 0.01 & 0.01 \\
+        CS863           & 0.96 & 0.92 & 0.88 & 0.90 & 0.83 \\
+        CS863 finetuned & 0.88 & 0.83 & 0.76 & 0.81 & 0.78 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{DINOv2 distillation into YOLO backbone compared to random initialization and COCO pretraining (DIVA-HisDB CS863).}
+    \label{tab:distillation}
+    \begin{tabular}{lccc}
+        \toprule
+        Metric & Random & Custom Distillation & COCO \\
+        \midrule
+        Line IoU  & 0.81 & 0.98 & 0.98 \\
+        Pixel IoU & 0.75 & 0.87 & 0.92 \\
+        DR        & 0.67 & 0.69 & 0.85 \\
+        RA        & 0.81 & 0.68 & 0.85 \\
+        FM        & 0.73 & 0.69 & 0.85 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Instance Segmentation Model}
+
+\section{RQ2: Effect of Shot Count}
+
+\begin{table}[H]
+    \centering
+    \caption{Effect of shot count on two-stage pipeline performance (DIVA-HisDB CB55).}
+    \label{tab:shot_count}
+    \begin{tabular}{lccccc}
+        \toprule
+        \# of Shots & Line IoU & Pixel IoU & DR & RA & FM \\
+        \midrule
+        10 & 0.77 & 0.74 & 0.77 & 0.95 & 0.85 \\
+        5  & 0.22 & 0.22 & 0.22 & 0.90 & 0.33 \\
+        3  & 0.23 & 0.22 & 0.22 & 0.89 & 0.35 \\
+        1  & 0.09 & 0.09 & 0.09 & 0.70 & 0.15 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{RQ3: Cross-Manuscript Generalization}
