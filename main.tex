@@ -57,6 +57,29 @@
 \nonzeroparskip             % Create space between paragraphs (optional).
 \setlength{\parindent}{0pt} % Remove paragraph indentation (optional).
 
+% Acronyms used throughout the thesis.
+\newacronym{ap}{AP}{Average Precision}
+\newacronym{cbad}{cBAD}{Competition on Baseline Detection}
+\newacronym{cer}{CER}{Character Error Rate}
+\newacronym{clip}{CLIP}{Contrastive Language--Image Pre-Training}
+\newacronym{cnn}{CNN}{Convolutional Neural Network}
+\newacronym{coco}{COCO}{Common Objects in Context}
+\newacronym{dr}{DR}{Detection Rate}
+\newacronym{fcn}{FCN}{Fully Convolutional Network}
+\newacronym{fm}{FM}{F-Measure}
+\newacronym{fsl}{FSL}{Few-Shot Learning}
+\newacronym{htr}{HTR}{Handwritten Text Recognition}
+\newacronym{iou}{IoU}{Intersection over Union}
+\newacronym{lineiu}{Line IU}{Line Intersection over Union}
+\newacronym{ocr}{OCR}{Optical Character Recognition}
+\newacronym{pixeliu}{Pixel IU}{Pixel Intersection over Union}
+\newacronym{pspnet}{PSPNet}{Pyramid Scene Parsing Network}
+\newacronym{ra}{RA}{Recognition Accuracy}
+\newacronym{rq}{RQ}{Research Question}
+\newacronym{sota}{SOTA}{State of the Art}
+\newacronym{tls}{TLS}{Text Line Segmentation}
+\newacronym{vit}{ViT}{Vision Transformer}
+
 \makeindex      % Use an optional index.
 \makeglossaries % Use an optional glossary.
 %\glstocfalse   % Remove the glossaries from the table of contents.
@@ -130,9 +153,9 @@
 % \end{kurzfassung}
 
 \begin{abstract}
-    Text line segmentation is a preprocessing step in the document analysis
-    pipeline performed before Optical Character Recognition (OCR) or
-    Handwritten Text Recognition (HTR), and its quality directly affects
+    \Gls{tls} is a preprocessing step in the document analysis
+    pipeline performed before \gls{ocr} or
+    \gls{htr}, and its quality directly affects
     recognition performance. For handwritten ancient manuscripts, this task is more
     challenging due to the scarcity of annotated data, degraded image quality,
     and high variability of manuscript layouts and styles.
@@ -146,6 +169,9 @@
 
     \todo{Add paragraph with results description}
 \end{abstract}
+
+% Expand acronyms again in the main text after the self-contained abstract.
+\glsresetall
 
 % Select the language of the thesis, e.g., english or naustrian.
 \selectlanguage{english}
@@ -172,8 +198,9 @@
     The following AI tools were used during the thesis completion process:
 
     \begin{itemize}
-        \item \textbf{Claude} (Anthropic): used for code generation and syntax checking.
+        \item \textbf{Claude} (Anthropic): used for code generation.
         \item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): used for code generation and syntax checking.
+        \item \textbf{Grammarly}: used for syntax checking.
     \end{itemize}
 
     The scientific analysis, experimental design, and conclusions are entirely the author's own work.

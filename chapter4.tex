@@ -1,5 +1,5 @@
 \chapter{Methodology}
-
+\label{sec:meth}
 \section{Datasets}
 
 \todo{list all dataset for all 3 RQs, add some additional info}
@@ -12,23 +12,23 @@
 Evaluation is performed using Input over Output (IU) metrics from Task 3 of ICDAR 2017 Competition on Layout Analysis for Challenging Medieval Manuscripts~\cite{metrics_iu}, computed with the freely available DIVA Line Segmentation Evaluator~\cite{diva_tool}, and other 3 metrics follow the Handwriting Segmentation Contest Protocol ~\cite{metrics_hscp}:
 
 \begin{enumerate}
-    \item Pixel Intersection over Union (Pixel IU): evaluates overlap between predicted and ground-truth at the pixel level. It is defined as
+    \item \Gls{pixeliu}: evaluates overlap between predicted and ground-truth at the pixel level. It is defined as
     \[ \text{Pixel IU} = \frac{TP}{TP + FP + FN} \]
     where TP are correctly predicted text pixels, FP are extra predicted pixels, and FN are missed text pixels.
 
-    \item Line Intersection over Union (Line IU): evaluates overlap at the line level using the same IoU formula:
+    \item \Gls{lineiu}: evaluates overlap at the line level using the same IoU formula:
     \[ \text{Line IU} = \frac{TP}{TP + FP + FN} \]
-    Here, TP is the number of matched lines, FP are spurious lines, and FN are missed lines. A predicted line matches ground truth if both pixel-level precision and recall exceed 75\%.
+    Here, TP is the number of mtched lines, FP are spurious lines, and FN are missed lines. A predicted line matches ground truth if both pixel-level precision and recall exceed 75\%.
 
-    \item Detection Rate (DR): proportion of matched ground-truth lines:
+    \item \Gls{dr}: proportion of matched ground-truth lines:
     \[ \text{DR} = \frac{M}{N_1} \]
     where \( M \) is the number of one-to-one matched lines, computed based on threshold 75\% and \( N_1 \) is the number of ground-truth lines.
 
-    \item Recognition Accuracy (RA): proportion of matched predicted lines:
+    \item \Gls{ra}: proportion of matched predicted lines:
     \[ \text{RA} = \frac{M}{N_2} \]
     where \( N_2 \) is the number of predicted lines.
 
-    \item F-Measure (FM): harmonic mean of DR and RA:
+    \item \Gls{fm}: harmonic mean of DR and RA:
     \[ \text{FM} = \frac{2 \cdot \text{DR} \cdot \text{RA}}{\text{DR} + \text{RA}} \]
 \end{enumerate}
 
