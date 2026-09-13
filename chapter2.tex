@@ -41,10 +41,9 @@ Machine learning methods are used at every stage of the processing pipeline. In 
 
 As shown in Figure \ref{fig:da_steps}, text line segmentation is the last step in the preprocessing phase; the quality of segmentation affects the performance of the downstream \gls{htr} task. Fizaine et al. measured this effect by comparing two segmentation models with postprocessing, using the same TrOCR \cite{DBLP:journals/corr/abs-2109-10282} detector fine-tuned on the DRoSb dataset, which they also used to train the segmentation models. As shown in Table \ref{tab:fizaine_ap_htr}, the Mask R-CNN \cite{he2017maskrcnn} model has better object-level metrics and also outperforms on the text recognition task, with a lower \gls{cer}.
 
-\glsadd{ap}
 \begin{table}[h]
     \centering
-    \caption{Object-level text line segmentation performance and downstream \gls{htr} performance reported by Fizaine et al. \cite{fizaine}.}
+    \caption{Object-level text line segmentation performance, measured by \gls{ap}, and downstream \gls{htr} performance reported by Fizaine et al. \cite{fizaine}.}
     \label{tab:fizaine_ap_htr}
     \begin{tabular}{lcccc}
         \hline
@@ -76,11 +75,11 @@ Text line segmentation aims to identify and separate individual text lines in a 
 
 \begin{table}[H]
     \centering
-    \caption{Comparison of unsupervised and supervised text line segmentation methods on the DIVA-HisDB \cite{diva_hisdb} dataset.}
+    \caption{Comparison of unsupervised and supervised text line segmentation methods on the DIVA-HisDB \cite{diva_hisdb} dataset using \gls{pixeliu} and \gls{lineiu}.}
     \label{tab:unsupervised_diva_metrics}
     \begin{tabular}{llcc}
         \hline
-        Model & Method & Pixel IU & Line IU \\
+        Model & Method & \glsentryshort{pixeliu} & \glsentryshort{lineiu} \\
         \hline
         Barakat et al. \cite{DBLP:journals/corr/abs-2003-08632}
         & Unsupervised & 97.50 & \textbf{99.46} \\
@@ -128,20 +127,18 @@ Supervised text line segmentation models fall into two categories: semantic segm
 
 The FEST competition \cite{Zottin_2025_FEST} has a wide range of solutions and showed that task-specific approaches can outperform the standard baselines. The winning PERO system used a ParseNet-based line detection pipeline followed by morphological post-processing. Another interesting submission, VAI-OCR, explicitly separated detection and segmentation into two stages: candidate text-line regions were first detected using a DBNet-style approach, after which individual cropped lines were segmented using an ensemble of U-Net and SegFormer models, which is particularly interesting, as to why such an intuitive approach is not used in text line segmentation. This thesis also developed a similar two-stage approach, described in Section \ref{sec:meth}.
 
-U-Net-based architectures demonstrate strong results with very limited training data. Sterzinger et al. \cite{sterzinger2025fewshot} train a lightweight UNet++ model with a connection-aware loss with a Line IU of 0.774 on U-DIADS-TL. More recently, APAU-Net \cite{Beghoura2026-dp} combines a residual U-Net with geometric priors and reaches an average Line IU of 0.943 under the same three-page training setting.
+U-Net-based architectures demonstrate strong results with very limited training data. Sterzinger et al. \cite{sterzinger2025fewshot} train a lightweight UNet++ model with a connection-aware loss with a \gls{lineiu} of 0.774 on U-DIADS-TL. More recently, APAU-Net \cite{Beghoura2026-dp} combines a residual U-Net with geometric priors and reaches an average \gls{lineiu} of 0.943 under the same three-page training setting.
 
 However, these recent few-shot text line segmentation studies have been developed and evaluated only for the U-DIADS-TL dataset and have not been evaluated on other datasets. This leaves the behavior of few-shot \gls{tls} methods across different historical document collections comparatively underexplored.
 
 \section{Few-shot Learning}
 \label{sec:fsl}
 
-\glsreset{fsl}
 \Gls{fsl} aims to learn from a small amount of labeled data \cite{fsl}, where the number of training instances, called shots  \(k\), typically \(k \in \{1,3,5,10\}\). In historical document analysis, this paradigm is highly relevant because of data limitations and the costs of labeling new ones. De Nardin et al. \cite{De_Nardin_2023}, proposed a few-shot framework in adjacent task of historical document layout analysis using only six annotated pages, two from each manuscript, instead of the complete 60-page training set of DIVA-HisDB \cite{diva_hisdb}. The data-poor method achieved performance comparable to data-rich approaches. Additionally, for scene text segmentation in natural images, Li et al. \cite{li2025tsalfewshottextsegmentation} proposed a model that creates prior knowledge from the pretrained \gls{clip} model \cite{DBLP:journals/corr/abs-2103-00020} to learn text attributes from only a few labeled images. On the TextSeg dataset \cite{xu2020rethinkingtextsegmentationnovel}, their 4-shot setting outperforms several many-shot baselines trained with up to 128 labeled examples, demonstrating the potential of few-shot methods for data-efficient text segmentation, even though the work is outside the historical document analysis domain. \Gls{fsl} can be applied in two approaches: meta-learning, where a model is trained to adapt rapidly to new tasks from a small support set, and transfer learning, where knowledge learned from a larger source dataset is reused for a target task with limited labeled data \cite{fsl}.
 
 \paragraph{Transfer Learning using Pretrained Backbones}
  In deep neural networks, transfer learning is commonly implemented by initializing the model's feature extractor (i.e., the backbone/encoder) with pretrained weights and then adapting these weights to the target task through a brief training process called fine-tuning \cite{plested2026transfer}. This approach lets the feature extractor adjust representations learned from a larger source dataset rather than learning them entirely from limited target data.
  
-\glsreset{vit}
 Transfer Learning using Pretrained Backbones is available with both \glspl{cnn} and transformer-based models. ResNet-derived \glspl{cnn} have been adopted as generic feature extractors, whereas \Glspl{vit} have demonstrated state-of-the-art performance on large-scale computer vision benchmarks \cite{dosovitskiy2021imageworth16x16words}. Subsequent work on data-efficient training strategies further enhanced \gls{vit} performance under limited-data regimes \cite{touvron2021trainingdataefficientimagetransformers}. In parallel, ConvNeXt established that appropriately modernized convolutional architectures can achieve performance comparable to transformer-based approaches \cite{liu2022convnet2020s,woo2023convnextv2}. Later, self-supervised vision foundation models have provided general-purpose pretrained representations. DINOv2 uses \gls{vit} encoders pretrained on the LVD-142M dataset and provides features suitable for dense prediction tasks \cite{oquab2024dinov2learningrobustvisual,darcet2024visiontransformersneedregisters}. DINOv3 extends this family with both \gls{vit} and ConvNeXt encoders trained using the same self-supervised framework \cite{dinov3}.
 
 Experiments with different backbones have also been performed in historical document analysis. Wödlinger and Sablatnig use an ImageNet-pretrained ResNet-50 as the encoder of a U-Net-based baseline detection system and report an F1 score of 0.881 on cBAD2019 \cite{wodlinger2021baseline}. Their experiments further show that improving the initial phase of model estimation improves final performance, with the F1 score increasing by ~10\% to 0.963 when ground-truth start points and angles are provided. Jindal and Ghosh \cite{jindal2023fasterrcnn} further replaced the conventional VGG-16 backbone of Faster R-CNN with ResNet-50 for ancient handwritten text line segmentation and report an F-measure of 99.98\%, outperforming the original Faster R-CNN configuration. Fizaine et al. \cite{fizaine} also suggest replacing the backbone in their Mask R-CNN implementation with a more recent architecture, such as ConvNeXt \cite{woo2023convnextv2}, to potentially improve both accuracy and processing speed. These works suggest room for extensive research on \gls{tls} backbones.
