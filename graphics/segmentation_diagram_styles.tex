@@ -1,0 +1,11 @@
+% Shared visual language for the three segmentation-method diagrams.
+\tikzset{
+    box/.style={draw, rounded corners=2pt, align=center, font=\small,
+        text width=44mm, minimum height=9mm, inner sep=4pt, line width=0.5pt},
+    process/.style={box, fill=gray!7},
+    model/.style={box, very thick, fill=blue!5},
+    output/.style={box, dashed},
+    supervision/.style={box, densely dashed, fill=gray!7},
+    link/.style={->, semithick},
+    traininglink/.style={link, densely dashed}
+}

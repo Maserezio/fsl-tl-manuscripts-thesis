@@ -1,3 +1,4 @@
+% !TeX root = main.tex
 \chapter{Theoretical Background and Related Work}
 \label{lit_rec}
 
@@ -8,7 +9,7 @@ expands on the theses mentioned in Section~\ref{sec:motivation}, describes Few-s
 
 Historical document analysis is a research field focused on digitizing, processing, and extracting information from historical documents, whether for content extraction or metadata analysis, such as authorship identification.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=1\linewidth]{graphics/Screenshot from 2026-06-21 13-06-12.png}
     \caption{The steps in a conventional Historical Document Processing workflow for both handwritten and printed documents, reproduced from \cite{DBLP:journals/corr/abs-2002-06300}.}
@@ -16,7 +17,7 @@ Historical document analysis is a research field focused on digitizing, processi
 \end{figure}
 
 Historical document analysis typically involves multiple stages, as shown in Figure~\ref{fig:da_steps}. In the pipeline, historical materials pose several challenges because their visual appearance and layout can differ markedly between collections. Frequent issues include uneven line spacing, different text orientations, notes in the margins, stains, bleed-through, and characters or text lines that touch or overlap \cite{Rabaev_Litvak_2025}. Figure~\ref{fig:hda_challenges} shows general layout- and degradation-related problems, along with examples of overlapping and deteriorated text line regions.
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
 
     \begin{subfigure}[t]{0.48\linewidth}
@@ -64,7 +65,7 @@ Text line segmentation is the main focus of this thesis and is discussed in Sect
 
 Text line segmentation aims to identify and separate individual text lines in a historical document image. Depending on the labeling method, a text line can be represented as a bounding box, a set of foreground pixels, a polygon surrounding the line, or a baseline. Figure~\ref{fig:line_representation} illustrates how different representations describe the same handwritten text lines \cite{Textline_maskrcnn}.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{graphics/tls_r.png}
     \caption{Different representations of a handwritten text line, reproduced from Islam et al. \cite{Textline_maskrcnn}.}
@@ -73,7 +74,7 @@ Text line segmentation aims to identify and separate individual text lines in a 
 
 \paragraph{Unsupervised Methods} extract individual lines without manually annotated training data, which is very helpful when labeled data for historical documents is limited. The most recent works rely on handcrafted heuristics applied to document structure, such as including elongation analysis for line slicing \cite{sathik2021}, seam carving with specifically designed cost functions \cite{nguyen2022effective}, statistical gap analysis with unsupervised parameter estimation \cite{mukherjee2022unsupervised}, and clustering-based blob-line generation combined with energy minimization \cite{droby2022unsupervised}. Although unsupervised models are the minority of released models in recent years, as Rabaev et al. \cite{Rabaev_Litvak_2025} report, unsupervised methods achieve performance comparable to and even greater than state-of-the-art models, as can be seen from Table~\ref{tab:unsupervised_diva_metrics}. However, their strong performance sometimes depends on the specific assumptions and characteristics of the document collections they are developed for, thus raising the question of whether such methods are robust. Hu et al. \cite{hu2021uchen} propose a method targeted specifically at Uchen Tibetan documents. In contrast, Nguyen et al. \cite{nguyen2022effective} and Droby et al. \cite{droby2022unsupervised} report strong, consistent results across different manuscript families. Additionally, these methods are usually computationally heavy, taking from 4 \cite{droby2022unsupervised} to approximately 30 minutes per page, depending on parameter configuration \cite{DBLP:journals/corr/abs-2003-08632}.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Comparison of unsupervised and supervised text line segmentation methods on the DIVA-HisDB \cite{diva_hisdb} dataset using \gls{pixeliu} and \gls{lineiu}.}
     \label{tab:unsupervised_diva_metrics}
@@ -96,7 +97,7 @@ Text line segmentation aims to identify and separate individual text lines in a 
 \paragraph{Supervised Methods} learn text line representations directly from annotated data, allowing them to capture visual characteristics that do not require creating any heuristics. In a recent survey \cite{Rabaev_Litvak_2025},
 supervised and hybrid approaches dominate text line segmentation, with more instance segmentation methods published in recent years.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{graphics/sup_m.png}
     \caption{\Gls{tls} for historical manuscripts by approach over time, reproduced from Rabaev et al. \cite{Rabaev_Litvak_2025}.}
@@ -104,7 +105,7 @@ supervised and hybrid approaches dominate text line segmentation, with more inst
 \end{figure}
 
 Supervised text line segmentation models fall into two categories: semantic segmentation, which may include postprocessing, and instance segmentation. Conventional \gls{fcn}-based models, such as Doc-UFCN \cite{boillet2021docufcn}, formulate the task as a two-class pixelwise classification with classes standing for background and text line. This approach works well when text lines are clearly separated, but neighboring or overlapping lines may be merged into the same foreground region and therefore require additional post-processing. More recent hybrid approaches, such as APAU-Net \cite{Beghoura2026-dp}, keep the semantic segmentation formulation but introduce explicit geometric prior heuristics describing the expected shape, position, and orientation of text lines. Instance segmentation methods address the separation problem differently. For example, Fizaine et al. \cite{fizaine} use Mask R-CNN and treat each text line as a separate object, predicting an individual mask for each detected line; this keeps neighboring lines as separate instances even when their regions are close or partially overlap, and it outperformed convolutional segmentation models, as can be seen from Table~\ref{tab:fizaine_instance_comparison}.
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Object-level text line segmentation performance reported by Fizaine et al. \cite{fizaine}.}
     \label{tab:fizaine_instance_comparison}
@@ -121,7 +122,13 @@ Supervised text line segmentation models fall into two categories: semantic segm
     \end{tabular}
 \end{table}
 
-\subparagraph{Robustness} across different scripts and document collections has been evaluated comparatively rarely. Islam et al. \cite{Textline_maskrcnn} study cross-script generalization by training their Mask R-CNN model only on the Urdu HUP dataset and evaluating it on eight other scripts. The model performs reasonably well on documents with layouts similar to the training data, but its performance drops by roughly 20--30\% on datasets with layouts the authors claim are non-similar. The largest failures occur on Arabic and German documents with very low inter-line spacing, showing that differences in page structure can still considerably affect cross-script generalization.
+\subparagraph{Robustness} across different scripts and document collections has been evaluated comparatively rarely. Islam et al. \cite{Textline_maskrcnn} study cross-script generalization by training their Mask R-CNN model only on the Urdu HUP dataset and evaluating it on eight other scripts. The model performs reasonably well on documents with layouts similar to the training data, but its performance drops by roughly 20--30\% on datasets with layouts the authors claim are non-similar. The largest failures occur on Arabic and German documents with very low inter-line spacing, showing that differences in page structure can still considerably affect cross-script generalization. Boillet et al.~\cite{Boillet2022} investigate cross-dataset robustness by
+training Doc-UFCN~\cite{boillet2021docufcn},
+dhSegment~\cite{oliveira2018dhsegment}, and
+ARU-Net~\cite{gruning2019arunet} on a unified collection of ten
+historical document datasets and evaluating on the previously unseen collections. Their results
+indicate that training on heterogeneous data can support
+generalization to unseen pages.
 
 \subparagraph{Learning on a Small Amount of Data} has only recently become a research direction. Zottin et al. \cite{zottin2025exploring} first evaluated three established semantic segmentation architectures---\gls{fcn} \cite{long2015fully}, \gls{pspnet} \cite{zhao2017pyramid}, and DeepLabV3+ \cite{chen2018encoder}---on the U-DIADS-TL dataset, with only 3 annotated images. Their poor results showed rather potential for this field, as it was only baseline research in this paradigm.
 
@@ -145,7 +152,7 @@ Experiments with different backbones have also been performed in historical docu
 The source of pretraining also matters. Common backbones are pretrained on large
 datasets such as ImageNet \cite{deng2009imagenet} and \gls{coco} \cite{DBLP:journals/corr/LinMBHPRDZ14}, whereas historical document datasets such as \gls{cbad} \cite{cbad-2019} and CATMuS \cite{catmus-medieval} are substantially smaller but closer to the target domain. Table~\ref{tab:pretraining_datasets} demonstrates an order-of-magnitude difference between the generic and task-specific datasets.
 
-\begin{table}[H]
+\begin{table}[htbp]
     \centering
     \caption{Size comparison of generic computer vision and historical document datasets relevant for pretraining.}
     \label{tab:pretraining_datasets}

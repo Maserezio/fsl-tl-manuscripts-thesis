@@ -35,12 +35,15 @@
 %\usepackage[inline]{enumitem} % User control over the layout of lists (itemize, enumerate, description).
 \usepackage{multirow}   % Allows table elements to span several rows.
 \usepackage{float}      % Provides the [H] float placement option.
+\usepackage{placeins}   % \FloatBarrier keeps floats inside their (sub)section.
 \usepackage{booktabs}   % Improves the typesetting of tables.
+\usepackage{longtable}  % Allows tables to span several pages.
 \usepackage{subcaption} % Allows the use of subfigures and enables their referencing.
 \usepackage[ruled,linesnumbered,algochapter]{algorithm2e} % Enables the writing of pseudo code.
 \usepackage[dvipsnames,table]{xcolor} % Allows the definition and use of colors. This package has to be included before tikz.
 \usepackage{nag}        % Issues warnings when best practices in writing LaTeX documents are violated.
 \usepackage{todonotes}  % Provides tooltip-like todo notes.
+\usetikzlibrary{positioning} % Enables relative node placement in diagrams.
 \usepackage{morewrites} % Increases the number of external files that can be used.
 \usepackage[a-2b,mathxmp]{pdfx}      % Enables PDF/A compliance. Loads the package hyperref and has to be included second to last.
 \usepackage[acronym,toc]{glossaries} % Enables the generation of glossaries and lists of acronyms. This package has to be included last.
@@ -55,6 +58,7 @@
 \setsecnumdepth{subsection} % Enumerate subsections.
 
 \nonzeroparskip             % Create space between paragraphs (optional).
+\raggedbottom               % Do not stretch paragraph spacing to fill pages ahead of [H] floats.
 \setlength{\parindent}{0pt} % Remove paragraph indentation (optional).
 
 % Acronyms used throughout the thesis.
@@ -69,9 +73,12 @@
 \newacronym{fm}{FM}{F-Measure}
 \newacronym{fsl}{FSL}{Few-Shot Learning}
 \newacronym{htr}{HTR}{Handwritten Text Recognition}
+\newacronym{ica}{ICA}{Independent Component Analysis}
 \newacronym{iou}{IoU}{Intersection over Union}
 \newacronym{lineiu}{Line IU}{Line Intersection over Union}
+\newacronym{loco}{LOCO}{Leave-One-Collection-Out}
 \newacronym{ocr}{OCR}{Optical Character Recognition}
+\newacronym{pca}{PCA}{Principal Component Analysis}
 \newacronym{pixeliu}{Pixel IU}{Pixel Intersection over Union}
 \newacronym{pspnet}{PSPNet}{Pyramid Scene Parsing Network}
 \newacronym{ra}{RA}{Recognition Accuracy}
@@ -104,7 +111,7 @@
 
 % Required data.
 \setregnumber{12239164}
-\setdate{01}{09}{2026} % Set date with 3 arguments: {day}{month}{year}.
+\setdate{19}{10}{2026} % Set date with 3 arguments: {day}{month}{year}.
 \settitle{\thesistitle}{Few-shot Textzeilen Segmentierung für historische Dokumente
 } % Sets English and German version of the title (both can be English or German). If your title contains commas, enclose it with additional curvy brackets (i.e., {{your title}}) or define it as a macro as done with \thesistitle
 % \setsubtitle{Optional Subtitle of the Thesis}{Optionaler Untertitel der Arbeit} % Sets English and German version of the subtitle (both can be English or German).
@@ -186,6 +193,9 @@
 \input{chapter5.tex}
 \input{chapter6.tex}
 \input{chapter7.tex}
+
+\appendix
+\input{appendix.tex}
 
 \backmatter
 
