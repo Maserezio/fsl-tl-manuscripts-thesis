@@ -182,24 +182,23 @@ Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~
 \section{Backbones}
 \label{sec:backbones}
 
-All segmentation approaches of Section~\ref{sec:tls-methods} are evaluated with the same encoder backbones, which are combined with several initializations.
+All segmentation approaches of Section~\ref{sec:tls-methods} are evaluated with the same encoders, which are combined with several initializations.
 
 \subsection{Encoder Architectures}
 \label{sec:encoder-architectures}
 
-Three encoder families are compared: ConvNeXt~\cite{liu2022convnet2020s} as a modern convolutional network, the Pyramid Vision Transformer v2 (PVTv2) as a hierarchical transformer, and the plain \gls{vit}~\cite{dosovitskiy2021imageworth16x16words}. ConvNeXt and PVTv2 produce feature maps at four resolutions with strides of 4 to 32 pixels. A \gls{vit} produces a single feature map with a stride of 16 pixels, which is transformed into a feature pyramid: transposed convolutions upsample it to strides of 4 and 8 pixels, and max-pooling downsamples it to a stride of 32 pixels.
+Three encoder architectures are compared: ConvNeXt~\cite{liu2022convnet2020s} as a modern convolutional network, the Pyramid Vision Transformer v2 (PVTv2) as a hierarchical transformer, and the plain \gls{vit}~\cite{dosovitskiy2021imageworth16x16words}. ConvNeXt and PVTv2 produce feature maps at four resolutions with strides of 4 to 32 pixels. A \gls{vit} produces a single feature map with a stride of 16 pixels, which is transformed into a feature pyramid: transposed convolutions upsample it to strides of 4 and 8 pixels, and max-pooling downsamples it to a stride of 32 pixels.
 
 \subsection{Initializations}
 \label{sec:initializations}
 
-Five initialization strategies are considered. They determine the encoder's starting weights, except for CATMuS pretraining, which initializes the complete model.
-
+Five initialization strategies are considered. They determine the encoder's starting weights:
 \begin{itemize}
     \item \textbf{Random.} The encoder weights are initialized randomly.
     \item \textbf{ImageNet.} The encoder uses weights obtained by supervised image-classification pretraining on ImageNet~\cite{deng2009imagenet,russakovsky2015imagenet}.
-    \item \textbf{DINOv3 (LVD-1689M).} The encoder uses weights obtained by self-supervised DINOv3 pretraining on LVD-1689M~\cite{dinov3}.
+    \item \textbf{DINOv3 (LVD-1689M).} The encoder uses weights released by Meta, obtained by self-supervised DINOv3 pretraining on LVD-1689M~\cite{dinov3}.
     \item \textbf{DINOv3 (cBAD).} Knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} transfers representations from a frozen DINOv3 ViT-B/16 teacher pretrained on LVD-1689M~\cite{dinov3} to the encoder using unlabeled cBAD 2019 pages~\cite{cbad-2019}. Training uses LightlyTrain~0.15.0 DistillationV3 (Table~\ref{tab:distillation}).
-    \item \textbf{CATMuS.} The complete model is pretrained with supervision on CATMuS Medieval line polygons. The resulting encoder and task-head weights initialize few-shot fine-tuning (Table~\ref{tab:catmus-pretraining}).
+    \item \textbf{CATMuS.} The weights pretrained with supervision on CATMuS Medieval line polygons. The resulting encoder and task-head weights are used for further fine-tuning (Table~\ref{tab:catmus-pretraining}).
 \end{itemize}
 
 \begin{table}[htbp]
@@ -252,7 +251,7 @@ Five initialization strategies are considered. They determine the encoder's star
 \subsection{Encoder Size}
 \label{sec:encoder-size}
 
-The encoders are grouped by parameter count into three brackets: XS (fewer than 8M parameters), S (8M to 20M), and M (more than 20M). Table~\ref{tab:backbones} lists the encoders of each bracket. The main comparison uses the M bracket, ConvNeXt-Tiny, PVTv2-B2, and ViT-Small, so that encoder capacity remains approximately constant while architecture and initialization vary. The smaller brackets are used only in the encoder-size study (Appendix~\ref{app:rq1-size}).
+The encoders are grouped by parameter count into three brackets: XS (fewer than 8M parameters), S (8M to 20M), and M (more than 20M). Table~\ref{tab:backbones} lists the encoders of each bracket. The main comparison uses the M bracket, ConvNeXt-Tiny, PVTv2-B2, and ViT-Small, since DINOv3 (LVD-1689M) exist only for M bracket models. The smaller brackets are used only in the encoder-size ablation study (Appendix~\ref{app:rq1-size}).
 
 \begin{table}[htbp]
     \centering
@@ -331,11 +330,11 @@ The two-stage method separates line localization from boundary prediction (Figur
     \label{fig:two-stage-method}
 \end{figure}
 
-A U-Net~\cite{DBLP:journals/corr/RonnebergerFB15} with a ResNet-34 encoder then segments each line crop. Its training targets are derived from the ground truth: each PAGE XML polygon, or each component of a binary mask, defines a bounding box, and the line mask inside this box forms the target; for binary masks, only the selected component is retained. The box is padded to preserve context, and crop and target are resized to a common elongated input size. In the detector-backbone comparison, the crop U-Net is kept fixed, so that differences are attributable to the detector.
+A U-Net~\cite{DBLP:journals/corr/RonnebergerFB15} with a ResNet-34 encoder then segments each line crop. Its training targets are derived from the ground truth: each PAGE XML polygon, or each component of a binary mask, defines a bounding box, and the line mask inside this box forms the target; for binary masks, only the connected component is used as a label. The box is padded to preserve context, and crop and target are resized to a common elongated input size. In the detector-backbone comparison, the crop U-Net is kept fixed, so that differences are attributable to the detector.
 
-The crop U-Net is trained on \(1024\times256\)-pixel crops with a padding of 15 pixels for 50 epochs, using AdamW with a learning rate of \(3\times10^{-4}\), a weight decay of \(10^{-4}\), and a batch size of four; the checkpoint with the highest validation Dice score is kept. Three segmentation losses are compared: binary cross-entropy (BCE), the Tversky loss~\cite{salehi2017tversky} with \(\alpha=0.3\) and \(\beta=0.7\), which weights missed foreground pixels more strongly than false positives, and the connectivity-preserving SuperVoxel loss~\cite{grim2025supervoxel} with \(\alpha=\beta=0.5\), which penalizes split and merged components. The Tversky and SuperVoxel models are warmed up with BCE for the first ten epochs. Unless stated otherwise, the crop U-Net is trained with the Tversky loss; the loss study is reported in Appendix~\ref{app:rq1-extra}.
+The crop U-Net is trained on \(1024\times256\)-pixel crops with a padding of 15 pixels for 50 epochs, using AdamW with a learning rate of \(3\times10^{-4}\), a weight decay of \(10^{-4}\), and a batch size of four; the checkpoint with the highest validation Dice score is kept. Three segmentation losses are compared: binary cross-entropy (BCE), the Tversky loss~\cite{salehi2017tversky} with \(\alpha=0.3\) and \(\beta=0.7\), which weights missed foreground pixels more strongly than false positives, and the connectivity-preserving SuperVoxel loss~\cite{grim2025supervoxel} with \(\alpha=\beta=0.5\), which penalizes split and merged components. The Tversky and SuperVoxel models are warmed up with BCE for the first ten epochs. The crop U-Net is trained with the Tversky loss as a result of an ablation study described in Appendix~\ref{app:rq1-extra}.
 
-At inference, each retained detection is padded in the same way and segmented independently. The probability map is resized to the native crop size before thresholding, and only its main connected component is kept. For binary-mask datasets, a horizontal morphological closing can additionally join fragmented line parts. The binarization threshold (0.5, 0.7, or 0.9) and the closing width (none or 4\% of the crop width) are selected per detector on the validation split by the mean line-level \gls{fm}, like the detection threshold. The crop masks are pasted into an empty page-sized instance map in descending confidence order, without overwriting pixels already assigned. For PAGE XML datasets, detections are restricted to the annotated main text region, overlapping row detections are removed, and a validation-selected width filter discards short detections. The largest contour of each crop mask becomes the text-line polygon, and the bottom of that polygon defines the baseline.
+At inference, each detection is padded in the same way and segmented independently. The probability map is resized to the native crop size before thresholding, and only its main connected component is kept. For binary-mask datasets, a horizontal morphological closing can additionally join fragmented line parts. The binarization threshold (0.5, 0.7, or 0.9) and the closing width (none or 4\% of the crop width) are selected per detector on the validation split by the mean line-level \gls{fm}, like the detection threshold. The crop masks are pasted into an empty page-sized instance map in descending confidence order, without overwriting pixels already assigned. For PAGE XML datasets, detections are restricted to the annotated main text region, overlapping row detections are removed, and a validation-selected width filter discards short detections. The largest contour of each crop mask becomes the text-line polygon, and the bottom of that polygon defines the baseline.
 
 \subsection{Instance Segmentation}
 \label{sec:mask-rcnn-method}
@@ -426,11 +425,11 @@ RQ3 examines whether a model trained on a few pages of one or more collections t
 
 \subsection{Collection Partitions}
 
-Each collection is partitioned once with seed 42 (Table~\ref{tab:dataset-splits}): three pages are drawn for training, 10\% of the pages, rounded to the nearest integer, for validation, and the remaining pages form the test set. Pinkas and NorHand v3 keep their official test sets and draw their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages. For NorHand v3, a first draw of three training pages did not represent the test pages and was replaced by a second draw from the same pool (Appendix~\ref{app:rq3-extra}). All line polygons are converted to instance masks, and pages with missing polygons or polygons with fewer than three vertices are excluded.
+Each collection is partitioned once with seed 42 (Table~\ref{tab:dataset-splits}): three pages are drawn for training, 10\% of the pages, rounded to the nearest integer, for validation, and the remaining pages form the test set. Pinkas and NorHand v3 keep their official test sets and draw their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages. All line polygons are converted to instance masks, and pages with missing polygons or polygons with fewer than three vertices are excluded.
 
 \subsection{Model and Training}
 
-All experiments use the Mask R-CNN of Section~\ref{sec:mask-rcnn-method}, retaining the CATMuS-pretrained proposal network and applying scale jitter during training. Table~\ref{tab:rq3-training-settings} lists the model, augmentation, and optimization settings. The configuration is selected by mean source-validation \gls{fm} in the ablation of Appendix~\ref{app:rq3-extra}. Score and mask thresholds are selected by validation \gls{fm}, with \gls{pixeliu} as the tie-breaker.
+All experiments use the Mask R-CNN of Section~\ref{sec:mask-rcnn-method}, using the CATMuS-pretrained proposal network, and applying scale jitter during training. Table~\ref{tab:rq3-training-settings} lists the model, augmentation, and optimization settings. The configuration is selected by mean source-validation \gls{fm} in the ablation of Appendix~\ref{app:rq3-extra}. Score and mask thresholds are selected by validation \gls{fm}, with \gls{pixeliu} as the tie-breaker.
 
 \begin{table}[htbp]
     \centering
