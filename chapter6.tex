@@ -1,3 +1,213 @@
 % !TeX root = main.tex
 \chapter{Discussion}
 \label{ch:discussion}
+
+This chapter explains the results of Chapter~\ref{ch:results} with a qualitative analysis of the predictions. It then answers the \glspl{rq}.
+
+\section{Interpretation of the Results}
+\label{sec:disc-failures}\label{sec:disc-qualitative}\label{sec:results-qualitative}
+
+This section explains three results of Chapter~\ref{ch:results}, namely the small effect of the encoder, the sufficiency of a single training page after pretraining on annotated lines, and the better transfer of the center-line model. Section~\ref{sec:disc-reconstruction} relates the errors to the step that turns a prediction into a line, Section~\ref{sec:disc-pretraining} examines what the pretraining on annotated lines provides, and Section~\ref{sec:disc-transfer-errors} relates the transfer errors to the size and the spacing of the lines.
+
+\subsection{Line Reconstruction and Mask Quality}
+\label{sec:disc-reconstruction}\label{sec:disc-roi-masks}\label{sec:disc-further-failures}
+
+Most differences between the pipelines arise after the encoder, in the step that turns a prediction into a line, which explains why the encoders reach similar results and why larger encoders improve the U-DIADS-TL result by only 1.5 to 1.6 percentage points (Appendix~\ref{app:rq1-size}). On U-DIADS-TL, Mask R-CNN finds the lines, but its \gls{roi} masks are not precise enough for the FEST evaluation. As shown in Figure~\ref{fig:udiads-roi-iou}, 79\% of the \gls{gt} lines overlap their best \gls{roi} mask with an \gls{iou} between 0.60 and 0.75, just below the matching threshold of 0.75, while 90\% of the lines segmented by the BBox U-Net in the same boxes exceed it. Figure~\ref{fig:udiads-roi-overlay} shows that the \gls{roi} masks are in the right place but extend beyond the ink. With identical detections, the line \gls{fm} therefore rises from 16.61\% with the \gls{roi} masks to 90.82\% with the BBox U-Net (Table~\ref{tab:second-stage}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{graphics/udiads_roi_iou.pdf}
+    \caption{Best IoU of each U-DIADS-TL test line (5,268 lines) with a predicted instance, for \glsentryshort{roi} masks and BBox U-Net masks. Dashed: FEST threshold of 0.75.}
+    \label{fig:udiads-roi-iou}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/udiads_roi_Latin2_230_roi_err.png}\caption{\glsentryshort{roi} masks, \gls{fm} 10.5\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/udiads_roi_Latin2_230_crop_err.png}\caption{BBox U-Net masks, \gls{fm} 81.6\%.}\end{subfigure}
+    \caption{\glsentryshort{roi} masks and BBox U-Net masks of the same Mask R-CNN detections on U-DIADS-TL Latin2 test page 230. Green marks covered ink, orange predicted pixels that are not ink, and blue missed ink. Generated from U-DIADS-TL~\cite{Zottin_2025_FEST}.}
+    \label{fig:udiads-roi-overlay}
+\end{figure}
+
+On DIVA-HisDB, the masks mainly change how much of a line's ink is covered, while the line \gls{fm} changes little. As shown in Table~\ref{tab:matched-pixels}, Mask R-CNN reaches a line \gls{fm} of 98.58\%, but its \gls{roi} masks cover only 89.92\% of the ink of the matched lines because they cut ascenders and descenders. With the BBox U-Net and the \gls{dp} seam, the same detections cover 98.63\% of the ink, and the center-line model covers 95.75\%, as the ink strokes that touch its height band are added to the line. The line \gls{fm} is only weakly correlated with this coverage over all pipelines and pages (Spearman 0.14), and on its 16 pages with a line \gls{fm} of 100\%, Mask R-CNN covers only 90.8\% of the ink.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Line \gls{fm} and pixel coverage of the matched lines on the DIVA-HisDB test pages (mean over the 30 pages).}
+    \label{tab:matched-pixels}
+    \begin{tabular}{@{}lcccc@{}}
+        \toprule
+        & & \multicolumn{3}{c}{Matched lines} \\
+        \cmidrule(l){3-5}
+        Pipeline & Line \gls{fm} & Pixel \gls{iou} & Recall & Precision \\
+        \midrule
+        U-Net & 95.76 & 94.46 & 95.80 & 98.52 \\
+        Center-line model & 98.20 & 93.95 & 95.75 & 98.10 \\
+        RT-DETR + BBox U-Net & 93.34 & 97.64 & 97.85 & \textbf{99.78} \\
+        Mask R-CNN & 98.58 & 89.54 & 89.92 & 99.52 \\
+        Mask R-CNN + BBox U-Net + \gls{dp} seam & \textbf{99.55} & \textbf{98.22} & \textbf{98.63} & 99.57 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Another error occurs at export. When only the largest contour of a crop mask is kept, the parts of a line that are disconnected at a wide word gap are lost. The \gls{dp} seam keeps these parts connected. With the same 853 predicted lines, it raises the number of correctly segmented lines from 842 to 851 of 858.
+
+For RT-DETR + BBox U-Net, both stages contribute to the errors on DIVA-HisDB, since \gls{gt} boxes and \gls{gt} masks each improve its line \gls{fm} by about 2.7 percentage points (Table~\ref{tab:rq1-twostage-components}). Additionally, the detector misses 20 of the 858 test lines, which are often short or lie next to interlinear glosses and rubrics, while Mask R-CNN misses none. Of the shortest quarter of the lines, 6.0\% are missed, compared with 1.1\% of the other lines. With one training page, the \gls{dp} seam raises the result of RT-DETR + BBox U-Net from 74.47\% to 95.52\% (Table~\ref{tab:rq2-pipelines-catmus}), so its few-shot errors also arise mainly in the reconstruction.
+
+All pipelines output non-overlapping polygons and assign every ink pixel to at most one line. This matches DIVA-HisDB, where only 0.04\% of the CB55 ink and none of the CS18 and CS863 ink lies in two \gls{gt} polygons. In NorHand v3, however, 2.46\% of the \gls{gt} ink belongs to two lines, so that such ink counts as an error for one of them.
+
+\FloatBarrier
+\subsection{Pretraining on Annotated Lines}
+\label{sec:disc-pretraining}
+
+The pretraining on annotated lines explains why a single training page is sufficient. As shown in Table~\ref{tab:zeroshot-precision}, the CATMuS-pretrained Mask R-CNN finds most DIVA-HisDB lines without fine-tuning, with a line recall of 94.5--99.6\% on the three manuscripts. However, its line precision is only 61.9--86.6\%, because it also returns lines that the \gls{gt} does not contain. Of its 1,190 predicted lines on the test pages, 854 lie mainly on main text, which contains 858 \gls{gt} lines, and 316 lie mainly on interlinear glosses and comments. After fine-tuning on one page, the line precision rises to 99.2--99.7\%, while the recall stays at 87.7--97.4\%. This indicates that the training page mainly adapts the model to the annotation convention of the manuscript. The same adaptation reduces the transfer to other collections, as the center-line model reaches 91.67\% on new collections without fine-tuning but only 83.88\% after fine-tuning on three pages of one collection, and \gls{wiseft} with \(\alpha=0.25\) restores 91.98\% (Table~\ref{tab:rq3-wiseft}).
+
+\begin{table}[htbp]
+    \centering
+    \caption[Line recall and precision of CATMuS-initialized Mask R-CNN without fine-tuning and with one page]{Line recall, precision, and \gls{fm} of CATMuS-initialized Mask R-CNN (ConvNeXt-Tiny) on the DIVA-HisDB test pages without fine-tuning and after fine-tuning on one randomly selected page.}
+    \label{tab:zeroshot-precision}
+    \small
+    \begin{tabular}{@{}lcccccc@{}}
+        \toprule
+        & \multicolumn{3}{c}{Without fine-tuning} & \multicolumn{3}{c}{One training page} \\
+        \cmidrule(lr){2-4}\cmidrule(l){5-7}
+        Manuscript & Recall & Precision & \gls{fm} & Recall & Precision & \gls{fm} \\
+        \midrule
+        CB55 & 98.4 & 61.9 & 75.0 & 87.7 & 99.6 & 93.0 \\
+        CS18 & 94.5 & 86.6 & 90.0 & 97.0 & 99.2 & 98.0 \\
+        CS863 & 99.6 & 83.3 & 88.8 & 97.4 & 99.7 & 98.4 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The center-line model shows a similar pattern. Without fine-tuning, it reaches 99.20\% on CB55 but only 77.58\% on CS18, where its line precision is 67.31\%. Domain-specific features without line annotations do not have the same effect. With one training page, Mask R-CNN with the cBAD-distilled encoder reaches 47.76\%, compared with 96.50\% with CATMuS initialization (Figure~\ref{fig:rq2-pretraining-shots}), although both encoders were trained on manuscript pages. Since only the CATMuS model was trained to segment lines, the initialization has a larger effect than the choice of the encoder.
+
+\subsection{Line Size and Spacing in Transfer}
+\label{sec:disc-transfer-errors}\label{sec:results-transfer-diagnostics}
+
+Without fine-tuning, the transfer of Mask R-CNN depends on the size of the lines (Table~\ref{tab:rq3-zeroshot-scale}). At the model input, the median height of a line polygon ranges from 12.5 pixels on Pinkas to 39.4 pixels on GRPOLY-DB, and the larger the lines are, the more of them Mask R-CNN splits into parts. On Pinkas, it predicts 1.07 lines per \gls{gt} line, while on GRPOLY-DB, it predicts 5.82 lines per \gls{gt} line and reaches 0.06\%. Over the seven collections, the Spearman correlation between the line height and the number of predicted lines per \gls{gt} line is 0.96.
+
+\begin{table}[htbp]
+    \centering
+    \caption[Line geometry and zero-shot transfer of the CATMuS-pretrained models]{Line geometry of the test pages and zero-shot transfer of the CATMuS-pretrained models, sorted by line height. Line height: median height of a \gls{gt} line polygon at the model input. Word gap: median width of the widest gap between words of a line, in line heights (40 sampled pages for the larger collections). Lines per GT line: predicted lines of Mask R-CNN per \gls{gt} line.}
+    \label{tab:rq3-zeroshot-scale}
+    \small
+    \begin{tabular}{@{}lccccc@{}}
+        \toprule
+        & Line height & Word gap & Lines per & \multicolumn{2}{c}{Zero-shot \gls{fm}} \\
+        \cmidrule(l){5-6}
+        Collection & (pixels) & (line heights) & GT line & Mask R-CNN & Center-line \\
+        \midrule
+        Pinkas & 12.5 & 0.62 & 1.07 & 77.54 & 83.97 \\
+        Phil.\ gr.\ 130 & 18.0 & 1.80 & 1.21 & 62.55 & 87.10 \\
+        RASM2018/2019 & 24.0 & 0.20 & 1.26 & 54.58 & 92.11 \\
+        RASAM & 29.6 & 0.22 & 1.43 & 64.68 & 92.94 \\
+        NorHand v3 & 30.9 & 0.62 & 3.01 & 29.79 & 93.26 \\
+        ONB Cod.\ Syr.\ 1 & 36.9 & 0.28 & 1.98 & 20.64 & 94.12 \\
+        GRPOLY-DB & 39.4 & 0.65 & 5.82 & 0.06 & 98.15 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Figure~\ref{fig:rq3-zeroshot-grpoly} shows that the splits occur at the gaps between words. On a RASM2018/2019 page with a typical result for Mask R-CNN (54.17\% page \gls{fm}, compared with 54.58\% for the collection), Mask R-CNN divides most long lines into two or three parts and misses their ends. On a GRPOLY-DB page with 5.81 predicted lines per \gls{gt} line, it segments single words instead of lines and reaches 0\%. In the three collections with stored zero-shot predictions, ONB Cod.\ Syr.\ 1, RASM2018/2019, and GRPOLY-DB, a line whose widest gap between words exceeds half of the line height is split in 61\% of the cases, compared with 27\% for narrower gaps. However, wide gaps alone do not explain the splits, since Pinkas has gaps of a similar width as GRPOLY-DB but small lines and few splits. The center-line model rescales every page so that its lines have the thickness \(T_0\) before decoding (Section~\ref{sec:rq3-center-line}) and returns every line of both pages as one polygon. It reaches more than 83\% on every collection, including the Hebrew, Arabic, Greek, and Syriac scripts that do not occur in CATMuS.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_rasm_3366_0255_gt.png}\caption{\Gls{gt}.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_rasm_3366_0255_maskrcnn.png}\caption{Mask R-CNN, \gls{fm} 54.17\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_rasm_3366_0255_centerline.png}\caption{Center-line model, \gls{fm} 100\%.}\end{subfigure}\\[4pt]
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_grpoly_0024_gt.png}\caption{\Gls{gt}.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_grpoly_0024_maskrcnn.png}\caption{Mask R-CNN, \gls{fm} 0\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/q2_zs_grpoly_0024_centerline.png}\caption{Center-line model, \gls{fm} 100\%.}\end{subfigure}
+    \caption{Zero-shot line polygons of the CATMuS-pretrained models on regions of RASM2018/2019 test page Or~3366\_0255 (a--c) and GRPOLY-DB test page 0024 (d--f). Page \gls{fm} in the subcaptions. Ink is colored by the polygon that contains it. Black ink lies in two polygons, and uncolored ink in no polygon. Generated from RASM2018/2019~\cite{KeinanSchoonbaert2019RASM} and GRPOLY-DB~\cite{Gatos2015GRPOLY}.}
+    \label{fig:rq3-zeroshot-grpoly}\label{fig:rq3-zeroshot-example}
+\end{figure}
+
+After fine-tuning on the target collection, the remaining errors are mainly merges of neighboring lines on dense pages. Table~\ref{tab:rq3-line-density} relates the transfer to the line density of the test pages. The two collections with the lowest center-line transfer, Phil.\ gr.\ 130 and Pinkas, are also the densest. On Phil.\ gr.\ 130, the distance between neighboring lines is 0.45 of the line height, and 93\% of a line box is covered by other lines. Here, the merges of Mask R-CNN arise in the mask head. When the \gls{gt} boxes are passed to the mask head of the model trained on ONB Cod.\ Syr.\ 1, the line \gls{fm} on the thirteen Phil.\ gr.\ 130 test pages drops from 53.3\% to 44.2\%, while the \gls{gt} masks exported in the same way reach 100\%.
+
+\begin{table}[htbp]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \caption{Line density of the test \gls{gt} and mean single-collection transfer into each collection.}
+    \label{tab:rq3-line-density}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccccc@{}}
+        \toprule
+        & Lines & Pitch / & Box covered & \multicolumn{2}{c}{Transfer into (\gls{fm})} \\
+        \cmidrule(l){5-6}
+        Collection & per page & line height & by other lines & Mask R-CNN & Center-line \\
+        \midrule
+        Phil.\ gr.\ 130 & 46 & 0.45 & 93\% & 45.49 & 87.28 \\
+        Pinkas & 44 & 0.69 & 57\% & 77.08 & 84.13 \\
+        RASAM & 26 & 0.69 & 54\% & 85.73 & 93.29 \\
+        NorHand v3 & 19 & 0.79 & 36\% & 67.65 & 90.65 \\
+        ONB Cod.\ Syr.\ 1 & 21 & 0.83 & 32\% & 88.41 & 94.56 \\
+        RASM2018/2019 & 20 & 0.90 & 29\% & 83.65 & 91.74 \\
+        GRPOLY-DB & 15 & 0.99 & 17\% & 45.88 & 97.90 \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+To measure the merges, the share of the ink of every \gls{gt} line covered by each predicted instance is computed on the training and validation pages of Phil.\ gr.\ 130, Pinkas, and NorHand v3. A line counts as merged if an instance that covers at least 25\% of its ink also covers at least 25\% of the ink of another line. As shown in Table~\ref{tab:rq3-error-types}, the two models differ mainly in the merges, with 33.3\% of the lines merged by Mask R-CNN and 9.9\% by the center-line model. The difference is largest on Phil.\ gr.\ 130 and smallest on NorHand v3, and for both models, merges become more frequent as the distance to the neighboring line decreases. More annotated source pages reduce the errors of Mask R-CNN, whose mean \gls{fm} on the held-out collections rises from 79.23\% with \gls{loco}-1 to 85.44\% with \gls{loco}-3, while the center-line model stays between 91.82\% and 92.64\% (Tables~\ref{tab:rq3-locok} and~\ref{tab:rq3-loco3-center-line}).
+
+\begin{table}[htbp]
+    \centering
+    \caption{Line-level error types of the single-collection models on the training and validation pages of the dense collections (\% of \gls{gt} lines). M: Mask R-CNN, C: center-line model.}
+    \label{tab:rq3-error-types}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}lrcccccc@{}}
+        \toprule
+        & & \multicolumn{2}{c}{Merged} & \multicolumn{2}{c}{Split} & \multicolumn{2}{c}{Missed} \\
+        \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){7-8}
+        Target collection & Lines & M & C & M & C & M & C \\
+        \midrule
+        Pinkas & 908 & 25.0 & 7.3 & 6.4 & 2.0 & 11.7 & 2.8 \\
+        Phil.\ gr.\ 130 & 1,220 & 46.2 & 1.5 & 13.9 & 2.8 & 7.4 & 0.2 \\
+        NorHand v3 & 1,108 & 26.0 & 21.2 & 11.1 & 6.7 & 10.6 & 0.8 \\
+        \midrule
+        All & 3,236 & 33.3 & 9.9 & 10.8 & 3.9 & 9.7 & 1.1 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The effect of the spacing is also tested on real pages whose line spacing is compressed artificially. Every annotated line is cut out with its ink and pasted back onto the cleaned page, and its vertical distance to the topmost line is scaled by a factor \(f\). As shown in Table~\ref{tab:rq3-density}, at \(f=0.55\), the mean \gls{fm} of the single-collection models of ONB Cod.\ Syr.\ 1, RASAM, and Phil.\ gr.\ 130 drops from 69.9\% to 43.2\% for Mask R-CNN and from 90.3\% to 55.9\% for the center-line model. In both analyses, the errors depend on the size and the spacing of the lines, and none of the analyzed transfer failures is related to the script or manuscript quality.
+
+\begin{table}[htbp]
+    \centering
+    \caption{\Gls{fm} of the single-collection models under artificial compression of the line spacing by the factor \(f\). M: Mask R-CNN, C: center-line model.}
+    \label{tab:rq3-density}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}lcccccccc@{}}
+        \toprule
+        & \multicolumn{2}{c}{ONB} & \multicolumn{2}{c}{RASAM} & \multicolumn{2}{c}{Phil.} & \multicolumn{2}{c}{Mean} \\
+        \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(l){8-9}
+        Spacing factor \(f\) & M & C & M & C & M & C & M & C \\
+        \midrule
+        1.00 & 83.3 & 91.1 & 85.7 & 92.6 & 40.7 & 87.3 & 69.9 & 90.3 \\
+        0.85 & 82.7 & 87.9 & 83.0 & 87.5 & 42.2 & 86.0 & 69.3 & 87.1 \\
+        0.70 & 82.2 & 87.2 & 69.8 & 80.1 & 31.6 & 77.3 & 61.2 & 81.5 \\
+        0.55 & 64.1 & 59.2 & 45.6 & 52.2 & 20.1 & 56.4 & 43.2 & 55.9 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\FloatBarrier
+\section{Answering the Research Questions}
+\label{sec:disc-answers}\label{sec:disc-interpretation}\label{sec:disc-initialization}\label{sec:disc-representations}\label{sec:disc-previous}
+
+The following paragraphs answer the three research questions based on the results of Chapter~\ref{ch:results} and the failure analysis in Section~\ref{sec:disc-failures}.
+
+\textbf{RQ1: How well, in terms of the line detection metrics, does an \gls{fsl} model using a transformer-based backbone perform compared to one using a \gls{cnn} backbone for text line segmentation in historical manuscripts?}
+
+The transformer-based encoders do not perform better than the \gls{cnn} encoders, as no encoder family is the best in all pipelines and the family changes the mean \gls{fm} by at most 6.53 percentage points. The initialization has a larger effect of up to 23.28 percentage points, which agrees with the benefit of in-domain pretraining reported by De Nardin et al.~\cite{denardin2025indomain}. The largest effect comes from the line reconstruction, which raises the U-DIADS-TL result of the same Mask R-CNN detections from 16.61\% to 90.82\% and leads to 92.03\% on U-DIADS-TL and 99.21\% on DIVA-HisDB, compared with the best published 83.00\%~\cite{Zottin_2025_FEST} and 97.43\%~\cite{signals3030032}.
+
+\textbf{RQ2: How many labeled images are needed to achieve performance comparable to \gls{sota} methods, as measured by the line detection metrics?}
+
+One training page per manuscript is sufficient if the model is pretrained on annotated lines, although additional annotated pages are still used for validation. With CATMuS initialization, Mask R-CNN reaches 96.50\% on DIVA-HisDB with one page and 98.88\% with the BBox U-Net and the \gls{dp} seam, compared with 97.43\% for Mask R-CNN+ trained on all pages~\cite{signals3030032}. Without this pretraining, one page gives at most 47.76\%, and the selection of the pages has a smaller effect than the initialization.
+
+\textbf{RQ3: How do the heterogeneity and quality (e.g., Latin-only vs.\ mixed scripts; clean vs.\ mixed clean and degraded vs.\ only degraded) of training documents affect the performance of a text line segmentation model, i.e., does manuscript diversity impact \gls{fsl} model robustness?}
+
+The transfer depends more on the line density and the annotation conventions of the target collection than on the script or the degradation of the documents (Section~\ref{sec:disc-failures}). The center-line model transfers better than Mask R-CNN, with 91.67\% compared with 44.26\% without fine-tuning, which agrees with the failures of Mask R-CNN on closely spaced lines reported by Islam et al.~\cite{Textline_maskrcnn}. More diverse source data improves Mask R-CNN from 70.56\% to 85.44\% (\gls{loco}-3), but this comparison also increases the number of training pages.
