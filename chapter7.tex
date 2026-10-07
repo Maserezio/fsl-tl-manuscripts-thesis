@@ -1,3 +1,26 @@
 % !TeX root = main.tex
-\chapter{Conclusions \& Future Work}
+\chapter{Conclusion and Future Work}
 \label{ch:conclusions}
+
+\section{Summary of Findings}
+\label{sec:conclusions}
+
+Five findings follow from the experiments:
+\begin{enumerate}
+    \item \textbf{The proposed models reach the state of the art:} 92.03\% on U-DIADS-TL, compared with the best published 83.00\%~\cite{Zottin_2025_FEST}, and 99.21\% on DIVA-HisDB, compared with 97.43\%~\cite{signals3030032}.
+    \item \textbf{The encoder matters little:} neither its family nor its size changes the results as much as the initialization and the line reconstruction.
+    \item \textbf{Pretraining on domain-specific data matters most:} with it, one training page per manuscript comes close to the state of the art.
+    \item \textbf{Random page selection is sufficient:} no dedicated selection strategy consistently outperforms it.
+    \item \textbf{Semantic segmentation transfers are more robust:} in the cross-collection experiments, the center-line model, reaches higher line detection metrics on unseen collections than Mask R-CNN (91.67\% compared with 44.26\% \gls{fm} without fine-tuning).
+\end{enumerate}
+
+\section{Future Work}
+\label{sec:future-work}
+
+Four directions follow from these findings:
+\begin{enumerate}
+    \item \textbf{Distillation with the recommended settings:} the cBAD distillation used shorter schedules than recommended because of limited computational resources. Distillation with the recommended schedules may give a stronger domain-specific encoder.
+    \item \textbf{Pretraining on more diverse data:} pretraining on collections with more varied layouts, including densely written pages, may reduce the line merges of the detection-based models.
+    \item \textbf{Effect of \gls{tls} methods on \gls{htr}:} this thesis evaluates the segmentation with line detection metrics only. How the different \gls{tls} pipelines affect the accuracy of a subsequent \gls{htr} model, for example when line masks miss ascenders, descenders, or diacritics, remains to be studied.
+    \item \textbf{Segmentation-free text recognition:} recent models recognize the text of a complete page without a prior line segmentation~\cite{coquenet2023dan}. Page-level recognition may be more efficient than segmenting and recognizing each line separately, and a comparison of both approaches with few annotated pages remains open.
+\end{enumerate}

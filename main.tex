@@ -43,6 +43,9 @@
 \usepackage[dvipsnames,table]{xcolor} % Allows the definition and use of colors. This package has to be included before tikz.
 \usepackage{nag}        % Issues warnings when best practices in writing LaTeX documents are violated.
 \usepackage{todonotes}  % Provides tooltip-like todo notes.
+\newcommand{\writenote}[1]{\todo[inline,color=orange!15,linecolor=orange!60]{\footnotesize\textbf{To write:} #1}}
+\newcommand{\revnote}[1]{\todo[inline,color=blue!8,linecolor=blue!50]{\footnotesize\textbf{Revise:} #1}}
+\newenvironment{rewrite}{\par\color{red!75!black}}{\par}  % text the author still has to rewrite
 \usetikzlibrary{positioning} % Enables relative node placement in diagrams.
 \usepackage{morewrites} % Increases the number of external files that can be used.
 \usepackage[a-2b,mathxmp]{pdfx}      % Enables PDF/A compliance. Loads the package hyperref and has to be included second to last.
@@ -63,15 +66,20 @@
 
 % Acronyms used throughout the thesis.
 \newacronym{ap}{AP}{Average Precision}
+\newacronym{bbox}{BBox}{Bounding Box}
+\newacronym{bce}{BCE}{Binary Cross-Entropy}
 \newacronym{cbad}{cBAD}{Competition on Baseline Detection}
 \newacronym{cer}{CER}{Character Error Rate}
 \newacronym{clip}{CLIP}{Contrastive Language--Image Pre-Training}
 \newacronym{cnn}{CNN}{Convolutional Neural Network}
 \newacronym{coco}{COCO}{Common Objects in Context}
+\newacronym{dp}{DP}{Dynamic Programming}
 \newacronym{dr}{DR}{Detection Rate}
 \newacronym{fcn}{FCN}{Fully Convolutional Network}
 \newacronym{fm}{FM}{F-Measure}
 \newacronym{fsl}{FSL}{Few-Shot Learning}
+\newacronym{gt}{GT}{Ground Truth}
+\newacronym{hda}{HDA}{Historical Document Analysis}
 \newacronym{htr}{HTR}{Handwritten Text Recognition}
 \newacronym{ica}{ICA}{Independent Component Analysis}
 \newacronym{iou}{IoU}{Intersection over Union}
@@ -82,10 +90,13 @@
 \newacronym{pixeliu}{Pixel IU}{Pixel Intersection over Union}
 \newacronym{pspnet}{PSPNet}{Pyramid Scene Parsing Network}
 \newacronym{ra}{RA}{Recognition Accuracy}
+\newacronym{roi}{ROI}{Region of Interest}
 \newacronym{rq}{RQ}{Research Question}
 \newacronym{sota}{SOTA}{State of the Art}
+\newacronym{ssl}{SSL}{Self-Supervised Learning}
 \newacronym{tls}{TLS}{Text Line Segmentation}
 \newacronym{vit}{ViT}{Vision Transformer}
+\newacronym{wiseft}{WiSE-FT}{Weight-Space Ensembles for Fine-Tuning}
 
 \makeindex      % Use an optional index.
 \makeglossaries % Use an optional glossary.
@@ -155,26 +166,20 @@
     \todo{Enter your text here.}
 \end{acknowledgements*}
 
-% \begin{kurzfassung}
-% \todo{Ihr Text hier.}
-% \end{kurzfassung}
+\begin{kurzfassung}
+    Text Line Segmentation ist ein Vorverarbeitungsschritt der historischen Dokumentanalyse vor der Texterkennung und beeinflusst deren Leistung direkt. Bei handschriftlichen historischen Manuskripten erschweren teure Annotationen, degradierte Bildqualität und variierende Schriftstile diese Aufgabe.
+
+    Diese Arbeit untersucht, welche Entwurfsentscheidung die Qualität der Text Line Segmentation bei wenigen annotierten Seiten bestimmt: die Modellarchitektur, ihr Feature Extractor und ihre Priors oder der Schritt, der Predictions in Zeilen überführt. Sie vergleicht Convolutional und transformerbasierte Encoder mit bis zu fünf Initialisierungen in zwei Paradigmen, Semantic Segmentation mit Postprocessing und Line Detection mit separater Line Segmentation, auf U-DIADS-TL und DIVA-HisDB. Zusätzlich untersucht sie, wie viele annotierte Seiten für eine mit dem State of the Art vergleichbare Leistung nötig sind, und evaluiert die Generalisierung über Manuskripte in beiden Paradigmen.
+
+    Die Ergebnisse zeigen, dass die Initialisierung wichtiger ist als die Architektur: Sie verändert die mittlere Line F-Measure um bis zu 23,3 Prozentpunkte, die Encoder-Familie um höchstens 6,5 Punkte. Supervised Pretraining auf großen annotierten Manuskriptsammlungen hat den stärksten Effekt: Mit einer annotierten Seite pro DIVA-HisDB-Manuskript erreicht es 96,5\,\%, verglichen mit veröffentlichten 97,4\,\% bei Training auf allen Seiten. Beim Transfer auf neue Sammlungen erreicht ein Center-Line-Modell aus dem Segmentation-Paradigma ohne Seiten der Zielsammlung im Mittel 91,7\,\% F-Measure, Mask R-CNN 44,3\,\%; trainiert auf je drei Seiten der übrigen sechs Sammlungen erreicht es 92,6\,\% gegenüber 85,4\,\% für Mask R-CNN.
+\end{kurzfassung}
 
 \begin{abstract}
-    Text line segmentation is a preprocessing step in the document analysis
-    pipeline performed before optical character recognition or
-    handwritten text recognition, and its quality directly affects
-    recognition performance. For handwritten ancient manuscripts, this task is more
-    challenging due to the scarcity of annotated data, degraded image quality,
-    and high variability of manuscript layouts and styles.
+    Text line segmentation is a preprocessing step in historical document analysis, performed before text recognition, and its quality directly affects recognition performance. For handwritten ancient manuscripts, this task is more challenging due to the costs of annotated data, degraded image quality, and variability of writing styles.
 
-    This thesis evaluates few-shot training of text line segmentation models
-    using three approaches: semantic segmentation, a two-stage detection
-    pipeline, and instance segmentation. Under the hypothesis that models with
-    convolution-based backbones are inferior in quality, measured by text line
-    detection metrics, to models with transformer-based backbones, both architectures are compared across varying sizes and pretrained weights,
-    with further fine-tuning on a low number of shots, from 1 to 20.
+    This thesis examines which design determines text line segmentation quality with a few pages of data: the model architecture, its feature extractor and priors, or the step that turns predictions into lines. It compares convolutional and transformer-based encoders with up to five initializations in two paradigms: semantic segmentation followed by postprocessing, and line detection followed by separate line segmentation, on U-DIADS-TL and DIVA-HisDB, additionally investigating how many labeled pages are needed to achieve performance comparable to the state of the art. Finally, it evaluates model generalization across manuscripts in both paradigms.
 
-    \todo{Add paragraph with results description}
+    The results demonstrate that initialization matters more than architecture: it changes the mean line F-measure by up to 23.3 percentage points, whereas the encoder family changes it by at most 6.5 points. Supervised pretraining on large annotated manuscript collections has the strongest effect. With one annotated page per DIVA-HisDB manuscript, it achieves 96.5\%, compared with 97.4\% published for training on all pages. In transfer to new collections, a center-line model from the segmentation paradigm reaches a mean F-measure of 91.7\% without any page of the target collection, compared with 44.3\% for Mask R-CNN; when trained on three pages from each of the other six collections, the two models reach 92.6\% and 85.4\%, respectively.
 \end{abstract}
 
 % Select the language of the thesis, e.g., english or naustrian.
@@ -205,17 +210,23 @@
     The following AI tools were used during the thesis completion process:
 
     \begin{itemize}
-        \item \textbf{Claude} (Anthropic): used for code generation.
-        \item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): used for code generation and syntax checking.
-        \item \textbf{Grammarly}: used for syntax checking.
+    	\item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): code generation and syntax checking.
+        \item \textbf{Grammarly}: spelling and grammar checking.
     \end{itemize}
 
-    The scientific analysis, experimental design, and conclusions are entirely the author's own work.
+    The research questions, the experimental design, and the interpretation of the results are the author's own work, and all numbers reported in this thesis are taken from the author's experiment logs.
 \end{aitools}
 
-% \begin{kitools}
-% \todo{Enter your text here.}
-% \end{kitools}
+\begin{kitools}
+    Folgende KI-Werkzeuge wurden bei der Erstellung der Arbeit verwendet:
+
+    \begin{itemize}
+        \item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): Syntaxprüfung.
+        \item \textbf{Grammarly}: Rechtschreib- und Grammatikprüfung.
+    \end{itemize}
+
+    Die Forschungsfragen, das experimentelle Design und die Interpretation der Ergebnisse stammen vom Autor; alle berichteten Zahlen stammen aus den Experimentprotokollen des Autors.
+\end{kitools}
 
 % Use an optional list of figures.
 \listoffigures % Starred version, i.e., \listoffigures*, removes the toc entry.

@@ -1,4 +1,5 @@
 /AGENTS.md
+.claude/
 
 # LaTeX build artifacts
 *.acn
@@ -26,13 +27,3 @@
 pdfa.xmpi
 main.pdf
 __pycache__/
-
-# Kept locally but not versioned: helper scripts and currently unused dataset figures
-scripts/
-graphics/*.py
-graphics/udiads_examples_fest.png
-graphics/diva_*_page.png
-graphics/diva_*_detail.png
-graphics/dataset_catmus_example.png
-graphics/dataset_cbad_example.png
-graphics/rq3_*.jpg

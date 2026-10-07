@@ -1,10 +1,14 @@
 % !TeX root = main.tex
-\chapter{Methodology}
-\label{sec:meth}
+\chapter{Experimental Setup}
+\label{ch:data}
+
+This chapter describes the data and the setup of the experiments to fulfill the \glspl{rq}. Section~\ref{sec:datasets} introduces the eleven datasets and their roles, and Section~\ref{metrics} defines the evaluation metrics. Section~\ref{sec:training-setup} then gives the training settings of the pipelines, Section~\ref{sec:page-selection-setup} the page selection of the page-count study, and Section~\ref{sec:cross-generalization} the setup of the cross-generalizatio  experiments.
+
 \section{Datasets}
-\label{sec:datasets}
-There are eleven historical-document datasets used for experiments , summarized in Table~\ref{tab:dataset-splits}. U-DIADS-TL and DIVA-HisDB are the target benchmarks for the backbone comparison and the shot-selection experiments. CATMuS Medieval is used for supervised pretraining and cBAD 2019 for unsupervised knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} with DINOv3 as the teacher model. The remaining seven collections form the cross-collection pool for the few-shot robustness experiments.
-Table~\ref{tab:dataset-splits} gives the number of training, validation, and test pages of each dataset; for U-DIADS-TL and DIVA-HisDB, the counts refer to each manuscript, ONB Cod.\ Syr.\ 1, RASAM, RASM2018/2019, Phil.\ gr.\ 130, and GRPOLY-DB are released without an official partition. To give all seven cross-collection datasets the same conditions, each of them is split into three training pages, a validation set, and a test set, whereby Pinkas and NorHand v3 keep their official test sets; 
+\label{sec:datasets}\label{sec:data-benchmarks}\label{sec:data-pretraining}\label{sec:data-cross}
+
+The experiments use eleven historical document datasets. DIVA-HisDB and U-DIADS-TL with published results are used to compare the pipelines, encoders, and initializations and to study the number of training pages. Two larger collections are used for the initializations: CATMuS Medieval for supervised pretraining and cBAD 2019 for unsupervised knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} with DINOv3 as the teacher model. The remaining seven collections form the pool for the cross-generalization experiments. Table~\ref{tab:dataset-splits} gives the number of training, validation, and test pages of each dataset. For U-DIADS-TL and DIVA-HisDB, the counts refer to each manuscript, and the partition of the seven cross-collection datasets is described in Section~\ref{sec:data-partitions}.
+
 \begin{table}[htbp]
     \centering
     \caption{Datasets used in the experiments.}
@@ -15,7 +19,7 @@ Table~\ref{tab:dataset-splits} gives the number of training, validation, and tes
     \captionsetup{font=footnotesize,skip=2pt}
     \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{3.2cm} >{\centering\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}X@{}}
         \toprule
-        Dataset & Language or script & Train/val/test & Text-line ground truth \\
+        Dataset & Language or script & Train/val/test & Text line ground truth \\
         \midrule
         U-DIADS-TL \cite{Zottin_2025_FEST} & Latin, Syriac & 3/10/15 & Binary pixel-level line masks \\
         DIVA-HisDB \cite{diva_hisdb} & Latin, Italian & 20/10/10 & PAGE XML line polygons \\
@@ -32,23 +36,256 @@ Table~\ref{tab:dataset-splits} gives the number of training, validation, and tes
     \end{tabularx}
 \end{table}
 
-\paragraph{U-DIADS-TL:} U-DIADS-TL~\cite{Zottin_2025_FEST} is the benchmark of the ICDAR 2025 FEST competition. It contains 28 pages from each of the manuscripts Latin2, Latin14396, and Syriaque 341, annotated with binary pixel-level line masks. The validation pages are used only for model and postprocessing selection.
-\paragraph{DIVA-HisDB:} DIVA-HisDB~\cite{diva_hisdb} contains 50 pages from each of Codex Bodmer 55 (CB55), Codex Sangallensis 18 (CSG18), and Codex Sangallensis 863 (CSG863), with main text, glosses, decorations, and overlapping lines. The experiments use the Task~2 PAGE XML annotations, which provide a polygon and a baseline for each text line.
-\paragraph{CATMuS Medieval:} CATMuS Medieval~\cite{catmus-medieval} contains medieval Latin-script manuscripts in Latin, French, Iberian, and Italian with PAGE XML line polygons, which are used for supervised pretraining.
-\paragraph{cBAD 2019:} cBAD 2019~\cite{cbad-2019} contains pages from seven European archives, annotated with text regions and baselines but without line polygons. Only its page images are used, without labels, for representation distillation.
-\paragraph{Pinkas:} Pinkas~\cite{Barakat2019Pinkas} contains 30 pages of early-modern records of the Frankfurt Jewish community in Hebrew, with bleed-through, stains, faded ink, and overlapping lines. Three training pages without valid line polygons are excluded.
-\paragraph{ONB Cod.\ Syr.\ 1:} ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1} contains 140 folios of a 16th-century Syriac manuscript of the Austrian National Library with one main-text column; short, partly vertical marginal lines are annotated as separate lines.
-\paragraph{RASAM:} RASAM~\cite{VidalGorene2021RASAM} contains 517 pages from 18 Arabic manuscripts in Maghrebi scripts of the BULAC library, combining both released parts. The images are taken from the library's IIIF server, and the polygons are rescaled where the image resolution differs from the PAGE XML page size.
-\paragraph{RASM2018/2019:} RASM2018/2019~\cite{KeinanSchoonbaert2019RASM} contains 120 pages of Arabic scientific manuscripts from the 10th to the 19th century from the British Library, with 2,620 line polygons. Its pages measure up to \(6464\times8984\) pixels, the highest resolution in the pool.
-\paragraph{Phil.\ gr.\ 130:} Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT,SindlevAndersen2026MedievalGreekHTR} contains 18 pages of a 14th-century Greek manuscript of the Austrian National Library with 847 line polygons; the images are not part of the release and are taken from the library viewer. With about 47 lines per page, it is the densest collection in the pool.
-\paragraph{GRPOLY-DB:} Of GRPOLY-DB~\cite{Gatos2015GRPOLY}, only the handwritten part is used: 46 pages of Greek polytonic documents with 693 line polygons. The pages contain few, widely spaced lines, and the polygons enclose a wide band around the handwriting.
-\paragraph{NorHand v3:} NorHand v3~\cite{Beyer2023NorHand} contains Norwegian letters and diaries from the 19th and early 20th centuries. The official test set is kept, and a random subset of 30 official training pages, drawn with seed 42, serves as the pool for training and validation pages. The line polygons range from narrow strips to irregular contours.
+The two benchmarks use different \gls{gt} formats, binary line masks and line polygons (Figure~\ref{fig:gt-formats}), so every pipeline has to produce both:
+\begin{itemize}
+    \item \textbf{U-DIADS-TL}~\cite{Zottin_2025_FEST} is the benchmark of the ICDAR 2025 FEST competition. It contains 28 pages from each of the manuscripts Latin2, Latin14396, and Syriaque 341, annotated with binary pixel-level line masks. The validation pages are used only for model and postprocessing selection.
+    \item \textbf{DIVA-HisDB}~\cite{diva_hisdb} contains 50 pages from each of Codex Bodmer 55 (CB55), Codex Sangallensis 18 (CS18), and Codex Sangallensis 863 (CS863), with main text, glosses, decorations, and overlapping lines. The experiments use the Task~2 PAGE XML annotations, which provide a polygon and a baseline for each text line.
+\end{itemize}
+The two initizalization corpora are much with 1,526 and 3,021 pages, but only CATMuS Medieval is annotated with line polygons (Figure~\ref{fig:initialization-datasets}):
+\begin{itemize}
+    \item \textbf{CATMuS Medieval}~\cite{catmus-medieval} contains medieval Latin-script manuscripts in Latin, French, Iberian, and Italian with PAGE XML line polygons, which are used for supervised pretraining.
+    \item \textbf{cBAD 2019}~\cite{cbad-2019} contains pages from seven European archives, annotated with text regions and baselines but without line polygons. Only its page images are used, without labels, for representation distillation.
+\end{itemize}
+The seven cross-generalization datasets cover five scripts, Hebrew, Syriac, Arabic, Greek, and Latin, as well as different line densities and degrees of degradation (Figure~\ref{fig:rq3-collections}):
+\begin{itemize}
+    \item \textbf{Pinkas}~\cite{Barakat2019Pinkas} contains 30 pages of early-modern records of the Frankfurt Jewish community in Hebrew, with bleed-through, stains, faded ink, and overlapping lines. Three training pages without valid line polygons are excluded.
+    \item \textbf{ONB Cod.\ Syr.\ 1}~\cite{AboudIshac2025ONBSyr1} contains 140 folios of a 16th-century Syriac manuscript of the Austrian National Library with one main-text column. Short, partly vertical marginal lines are annotated as separate lines.
+    \item \textbf{RASAM}~\cite{VidalGorene2021RASAM} contains 517 pages from 18 Arabic manuscripts in Maghrebi scripts of the BULAC library, combining both released parts. The images are taken from the library's IIIF server, and the polygons are rescaled where the image resolution differs from the PAGE XML page size.
+    \item \textbf{RASM2018/2019}~\cite{KeinanSchoonbaert2019RASM} contains 120 pages of Arabic scientific manuscripts from the 10th to the 19th century from the British Library, with 2,620 line polygons. Its pages measure up to \(6464\times8984\) pixels, the highest resolution in the pool.
+    \item \textbf{Phil.\ gr.\ 130}~\cite{SindlevAndersen2026PhilGrGT} contains 18 pages of a 14th-century Greek manuscript of the Austrian National Library with 847 line polygons. The images are not part of the release and are taken from the library viewer. With about 47 lines per page, it is the densest collection in the pool.
+    \item \textbf{GRPOLY-DB}~\cite{Gatos2015GRPOLY} is used only in its handwritten part: 46 pages of Greek polytonic documents with 693 line polygons. The pages contain few, widely spaced lines, and the polygons enclose a wide band around the handwriting.
+    \item \textbf{NorHand v3}~\cite{Beyer2023NorHand} contains Norwegian letters and diaries from the 19th and early 20th centuries. The official test set is kept, and a random subset of 30 official training pages, drawn with seed 42, serves as the pool for training and validation pages. The line polygons range from narrow strips to irregular contours.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_catmus_example.png}
+        \caption{A CATMuS page with text-line polygons.}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_cbad_example.png}
+        \caption{A cBAD page with region contours and baselines.}
+    \end{subfigure}
+    \caption{Example pages of the pretraining corpora CATMuS Medieval~\cite{catmus-medieval} and cBAD 2019~\cite{cbad-2019}.}
+    \label{fig:initialization-datasets}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/gtfmt_udiads_img.jpg}\caption{U-DIADS-TL page.}\label{fig:gt-formats-udiads}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/gtfmt_udiads_mask.png}\caption{U-DIADS-TL binary line mask.}\end{subfigure}\\[4pt]
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/gtfmt_diva_img.jpg}\caption{DIVA-HisDB page.}\label{fig:gt-formats-diva}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/gtfmt_diva_polys.jpg}\caption{DIVA-HisDB line polygons.}\end{subfigure}
+    \caption{Ground-truth formats: binary line mask with drawn baselines (U-DIADS-TL Latin2) and line polygons (DIVA-HisDB CS18). Generated from U-DIADS-TL~\cite{Zottin_2025_FEST} and DIVA-HisDB~\cite{diva_hisdb}.}
+    \label{fig:gt-formats}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_Pinkas.jpg}\caption{Pinkas.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_ONB.jpg}\caption{ONB Cod.\ Syr.\ 1.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_RASAM.jpg}\caption{RASAM.}\end{subfigure}
+
+    \medskip
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_RASM.jpg}\caption{RASM2018/2019.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_GRPOLY.jpg}\caption{GRPOLY-DB.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{graphics/rq3gt_NorHand_v3.jpg}\caption{NorHand v3.}\end{subfigure}
+
+    \medskip
+    \begin{subfigure}[t]{\linewidth}\centering\includegraphics[width=\linewidth]{graphics/rq3gt_Phil_gr_130.jpg}\caption{Phil.\ gr.\ 130.}\end{subfigure}
+    \caption[Training-page crops of the seven cross-collection datasets]{Training-page crops of the seven cross-collection datasets with ground-truth line polygons. Generated from Pinkas~\cite{Barakat2019Pinkas}, ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1}, RASAM~\cite{VidalGorene2021RASAM}, RASM2018/2019~\cite{KeinanSchoonbaert2019RASM}, GRPOLY-DB~\cite{Gatos2015GRPOLY}, NorHand v3~\cite{Beyer2023NorHand}, and Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT}.}
+    \label{fig:rq3-collections}
+\end{figure}
+
+\glsunset{dr}\glsunset{ra}
+\section{Evaluation Metrics}
+\label{metrics}
+
+Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~\cite{diva_tool}: Pixel Intersection over Union (Pixel IU), Line Intersection over Union (Line IU), Detection Rate (DR), Recognition Accuracy (RA), and F-Measure (FM). For U-DIADS-TL, the FEST evaluator is used instead~\cite{Zottin_2025_FEST}.
+
+\begin{enumerate}
+    \item \Gls{pixeliu} measures the overlap between predicted and ground-truth foreground pixels:
+    \[\text{Pixel IU} = \frac{TP}{TP + FP + FN}.\]
+
+    \item \Gls{lineiu} applies the same intersection-over-union principle at the text-line level:
+    \[\text{Line IU} = \frac{TP}{TP + FP + FN}.\]
+    Here, $TP$, $FP$, and $FN$ denote correctly detected, extra, and missed lines, respectively. A prediction is correct when both its pixel precision and recall are at least $75\%$.
+
+    \item \Gls{dr} measures the proportion of ground-truth lines that are matched:
+    \[\text{DR} = \frac{M}{N_1},\]
+    where $M$ is the number of matched lines and $N_1$ is the number of ground-truth lines.
+
+    \item \Gls{ra} measures the proportion of predicted lines that are matched:
+    \[\text{RA} = \frac{M}{N_2},\]
+    where $N_2$ is the number of predicted lines.
+
+    \item \Gls{fm} is the harmonic mean of DR and RA:
+    \[\text{FM} = \frac{2\cdot\text{DR}\cdot\text{RA}}{\text{DR}+\text{RA}}.\]
+\end{enumerate}
+
+\section{Experiment Configurations}
+
+The experiments answer the three \glspl{rq}. \Gls{rq}~1 compares the pipelines, encoders, and initializations on the complete benchmark partitions, \gls{rq}~2 reduces the number of training pages, and \gls{rq}~3 applies the models to collections that were not seen during training.
+
+\subsection{Training Setup}
+\label{sec:training-setup}\label{sec:training-semantic}\label{sec:training-two-stage}\label{sec:training-mask-rcnn}\label{sec:training-center-line}
+
+All pipelines are trained on the same instance representation of the \gls{gt}: every line polygon of DIVA-HisDB, CATMuS, and the cross-collection datasets, and every connected component of a U-DIADS-TL mask, becomes an instance mask and a \gls{bbox}. U-DIADS-TL and DIVA-HisDB keep their benchmark partitions, and in \gls{rq}~2 the training pages are selected from the training pool of each DIVA-HisDB manuscript while the validation pages stay the same. For every pipeline, the checkpoint, the thresholds, and the postprocessing parameters are selected on the validation pages, and all runs use the same seed. The transfer experiments of \gls{rq}~3 use the settings of Section~\ref{sec:cross-generalization}.
+
+Table~\ref{tab:training-settings} lists the training settings of the five networks. The detectors use only photometric augmentation, so that the instance geometry stays aligned with the page. Since RT-DETR is trained with a batch size of one, its BatchNorm layers are frozen. Mask R-CNN uses anchors adapted to long and thin text lines and identical heads for all encoders. Its box and mask predictors are reinitialized for the text line class, while the other heads keep their \gls{coco} initialization. The center-line model is trained on page crops rescaled to a common line thickness and is decoded as described in Section~\ref{sec:rq3-center-line}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Training settings of the networks in \gls{rq}~1 and \gls{rq}~2.}
+    \label{tab:training-settings}\label{tab:rq3-center-line-settings}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}llllll@{}}
+        \toprule
+        & U-Net & Center-line & RT-DETR & BBox U-Net & Mask R-CNN \\
+        \midrule
+        Encoder & 3 families & ConvNeXt-Tiny & 3 families & ResNet-34 & 3 families \\
+        Input & \(448^2\) crops & \(512^2\) crops\(^{a}\) & page, \(1152^2\) & \(1024\times256\) crops & page, \(704^2\)/\(1024^2\)\(^{b}\) \\
+        Length & \(\le\)100 epochs\(^{c}\) & 1,500/800 steps\(^{b}\) & 100 epochs & 50 epochs & 30/200 epochs\(^{b}\) \\
+        Batch size & 4 & 4 & 1 (\(\times\)2 accum.) & 4 & 1 \\
+        Learning rate\(^{d}\) & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(10^{-3}\) / \(10^{-4}\) \\
+        Schedule & cosine & one-cycle & constant & constant & cosine \\
+        Loss & BCE + Dice & BCE + Dice, \(L_1\) & RT-DETR loss & BCE / Tversky / SV & Mask R-CNN loss \\
+        Augmentation & flip, rotation, B/C & B/C, blur & color jitter & B/C, affine, noise & color jitter \\
+        Checkpoint & val.\ pixel \gls{iou} & final & val.\ box mAP & val.\ Dice & val.\ split \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+\end{table}
+
+The BBox U-Net is trained separately from the detectors on \gls{gt} line crops, so that the same model can segment the boxes of both detectors. Three losses are compared for it: \gls{bce}, the Tversky loss~\cite{salehi2017tversky}, which weights missed foreground pixels more strongly than false positives, and the connectivity-preserving SuperVoxel loss~\cite{grim2025supervoxel}, which penalizes split and merged components. In \gls{rq}~1, the detector comparisons use a fixed BBox U-Net, trained with the Tversky loss on U-DIADS-TL and with BCE on DIVA-HisDB, and the loss study is reported in Appendix~\ref{app:rq1-extra}.
+
+\label{sec:training-pretraining}
+Two initializations of Section~\ref{sec:initializations} require an additional training stage before few-shot fine-tuning: the distillation on cBAD 2019 (Table~\ref{tab:distillation}) and the supervised pretraining on CATMuS (Table~\ref{tab:catmus-pretraining}). Because of limited computational resources, the distillation schedules are shorter than recommended by LightlyTrain~\cite{lightlytrain-distillation}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Distillation on cBAD 2019.}
+    \label{tab:distillation}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        Setting & Value \\
+        \midrule
+        Data & 3,021 unlabeled cBAD 2019 pages \\
+        Teacher & DINOv3 ViT-B/16 \\
+        Students & ConvNeXt-Tiny, PVTv2-B2, ViT-Small (random initialization) \\
+        Length & 1,100 epochs (ConvNeXt-Tiny), 300 epochs (PVTv2-B2, ViT-Small) \\
+        Input / batch size & \(224^2\) random crops / 128 (gradient accumulation) \\
+        Optimizer & AdamW, peak learning rate \(1.44\cdot10^{-4}\), weight decay 0.04\(^{a}\) \\
+        Schedule & cosine with 10 warm-up epochs \\
+        Augmentation & random resized crops, flip, color jitter, grayscale, blur \\
+        Checkpoint & last epoch \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+    \parbox{0.86\linewidth}{\scriptsize \(^{a}\)Excluding bias, normalization, and token parameters.}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Pretraining on CATMuS Medieval.}
+    \label{tab:catmus-pretraining}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}llll@{}}
+        \toprule
+        & Mask R-CNN & RT-DETR & Center-line \\
+        \midrule
+        Data & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,334 pages\(^{a}\) \\
+        Supervision & line masks & line boxes & center lines, ends, distances \\
+        Length & 30 epochs & 10 epochs & 12,000 steps \\
+        Input & \(704^2\) & \(1152^2\) & \(512^2\) crops\(^{b}\) \\
+        Batch size & 1 & 1 (\(\times\)2 accum.) & 4 \\
+        Learning rate\(^{c}\) & \(10^{-3}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
+        Schedule & cosine & constant & one-cycle \\
+        Augmentation & color jitter & color jitter & B/C, blur \\
+        Checkpoint & val.\ mask AP@0.5 & val.\ box AP@[0.5:0.95] & final \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+\end{table}
+
+\subsection{Page Selection Setup}
+\label{sec:page-selection-setup}
+
+The page selection of \gls{rq}~2 is applied to DIVA-HisDB, since only its manuscripts provide a pool of twenty training pages, whereas U-DIADS-TL provides three. The strategies of Section~\ref{sec:shot-sampling} choose \(k\in\{1,3,5,10,15\}\) pages from the twenty training pages of each DIVA-HisDB manuscript. For the embedding-based strategies, each page is resized to \(720\times720\) pixels and ImageNet-normalized, and each feature dimension is standardized across the candidate pool.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/shot_sampling_pca.pdf}\caption{\Gls{pca} projections.}\label{fig:shot-sampling-pca}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/shot_sampling_ica.pdf}\caption{\Gls{ica} projections.}\label{fig:shot-sampling-ica}\end{subfigure}
+    \caption[Page projections for five-shot page selection]{Two-dimensional projections of the twenty training pages per DIVA-HisDB manuscript (rows: CB55, CS18, CS863) with five-shot selections: max--min (red circles), farthest from centroid (green squares), centroid (black crosses). Generated from DIVA-HisDB~\cite{diva_hisdb}.}
+    \label{fig:shot-sampling}
+\end{figure}
+
+\subsection{Cross-Collection Transfer}
+\label{sec:cross-generalization}
+
+\Gls{rq}~3 examines whether a model trained on a few pages of one or more collections transfers to a collection that it has never seen during training. For this purpose, it uses the seven cross-collection datasets of Section~\ref{sec:datasets}.
+
+\label{sec:data-partitions}
+
+Five of the seven cross-collection datasets, ONB Cod.\ Syr.\ 1, RASAM, RASM2018/2019, Phil.\ gr.\ 130, and GRPOLY-DB, are released without an official partition. To give all seven cross-collection datasets the same conditions, each of them is partitioned once with three pages are drawn for training, 10\% of the pages for validation, and the remaining pages form the test set. Pinkas and NorHand v3 keep their official test sets and hold their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages. 
+
+All experiments use the center-line model (Section~\ref{sec:rq3-center-line}) and Mask R-CNN (Section~\ref{sec:mask-rcnn-method}). Table~\ref{tab:rq3-training-settings} lists the model, augmentation, and optimization settings. The configuration is selected by the mean source-validation \gls{fm} among cumulative modifications of a baseline on nine source--target pairs, so that no target test page influences the choice. Score and mask thresholds are selected by validation \gls{fm}, and \gls{pixeliu} decides between settings with the same \gls{fm}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Settings of the transfer experiments.}
+    \label{tab:rq3-training-settings}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        & Mask R-CNN & Center-line \\
+        \midrule
+        Initialization & ConvNeXt-Tiny, CATMuS & ConvNeXt-Tiny, CATMuS or cBAD \\
+        Input & \(1152^2\) canvas & \(512^2\) crops (Table~\ref{tab:training-settings}) \\
+        Length & 50 epochs & 3,000 steps \\
+        Batch size & 1 & 4 \\
+        Learning rate\(^{a}\) & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
+        Schedule & cosine & one-cycle \\
+        Augmentation & scale jitter\(^{b}\), photometric & B/C, blur \\
+        Anchors & 32--512 pixels; ratios 0.05--1.0 & -- \\
+        Thresholds & score \(\{0.3,0.5,0.7,0.9\}\), mask \(\{0.3,0.5\}\)\(^{c}\) & -- \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+    \end{table}
+
+At inference, masks are assigned in descending confidence order and restored to page resolution. The largest contour of each mask defines its text line polygon, and points near its lowest point define the baseline, using the tolerance in Table~\ref{tab:rq3-training-settings}. Predictions are not clipped to a main-text region, because the collections do not provide one.
+
+\label{sec:wiseft}
+
+Fine-tuning on a few annotated pages adapts a pretrained model to these pages but can reduce the robustness that it gained during pretraining. Therefore, it is checked whether \gls{wiseft}~\cite{wortsman2022wiseft} improves the transfer. It requires no additional training: the weights of the pretrained and the fine-tuned model are linearly interpolated,
+\begin{equation}
+    \theta = (1-\alpha)\,\theta_{\mathrm{pre}} + \alpha\,\theta_{\mathrm{ft}},
+    \label{eq:wiseft}
+\end{equation}
+where \(\theta_{\mathrm{pre}}\) and \(\theta_{\mathrm{ft}}\) denote the pretrained and fine-tuned weights, and \(\alpha\) is the interpolation weight. A weight of \(\alpha=0\) gives the pretrained model and \(\alpha=1\) the fine-tuned model. The CATMuS-pretrained center-line model uses \(\alpha=0.5\), which was fixed before the evaluation, whereas Mask R-CNN and the cBAD-encoder center-line model use the fine-tuned weights. To measure the effect of \(\alpha\), both CATMuS-pretrained models are additionally evaluated in single-collection transfer with \(\alpha\in\{0,0.25,0.5,0.75,1\}\).
+
+Transfer is measured in three settings:
+\begin{itemize}
+    \item \textbf{Zero-shot.} The CATMuS-pretrained model is applied without fine-tuning, using the fixed thresholds in Table~\ref{tab:rq3-training-settings}.
+    \item \textbf{Single-collection transfer.} One model is trained on the three training pages of each collection, its thresholds are selected on the validation pages of that collection, and it is applied unchanged to all seven test sets. The diagonal of the resulting \(7\times7\) matrix is the in-domain result, and the off-diagonal cells measure zero-shot transfer.
+    \item \textbf{\Gls{loco} transfer.} For each held-out collection, a \gls{loco} model is trained on \(k\in\{1,2,3\}\) pages from each of the six other collections, that is, on 6, 12, or 18 pages (\gls{loco}-1, \gls{loco}-2, and \gls{loco}-3). The page sets are nested and taken from the single-collection training pages. The thresholds are selected on up to three validation pages per source collection, so the held-out collection takes no part in training or selection. The result is compared with the in-domain result and with the best off-diagonal single-collection entry of the same column, which overestimates a source chosen in advance because it is identified on test results.
+\end{itemize}
 
 % Dataset figures removed for now; restore by uncommenting.
 % \begin{figure}[H]
 %     \centering
 %     \includegraphics[width=0.9\linewidth]{graphics/udiads_examples_fest.png}
-%     \caption{Representative U-DIADS-TL pages and their ground truth, visualized with a different colour for each text-line instance. From left to right: Latin2, Latin14396, and Syriaque 341. Reproduced from the FEST publication~\cite{Zottin_2025_FEST}.}
+%     \caption{U-DIADS-TL pages with their line instances (Latin2, Latin14396, Syriaque 341), reproduced from~\cite{Zottin_2025_FEST}.}
 %     \label{fig:udiads-examples}
 % \end{figure}
 
@@ -87,24 +324,8 @@ Table~\ref{tab:dataset-splits} gives the number of training, validation, and tes
 %         \includegraphics[width=\linewidth,height=0.20\textheight,keepaspectratio]{graphics/diva_csg863_detail.png}
 %         \caption{CSG863 detail.}
 %     \end{subfigure}
-%     \caption{Representative full pages and enlarged details from the three DIVA-HisDB manuscripts. Reproduced from De Nardin et al.~\cite{De_Nardin_2023}, which uses DIVA-HisDB~\cite{diva_hisdb}.}
+%     \caption{DIVA-HisDB pages and details, reproduced from De Nardin et al.~\cite{De_Nardin_2023} (DIVA-HisDB~\cite{diva_hisdb}).}
 %     \label{fig:diva-examples}
-% \end{figure}
-
-% \begin{figure}[H]
-%     \centering
-%     \begin{subfigure}[t]{0.48\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_catmus_example.png}
-%         \caption{A CATMuS page with text-line polygons.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.48\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_cbad_example.png}
-%         \caption{A cBAD page with region contours and baselines.}
-%     \end{subfigure}
-%     \caption{Examples from the initialization corpora. cBAD supplies unlabelled pages for representation distillation~\cite{cbad-2019}, whereas CATMuS supplies line-polygon supervision for pretraining~\cite{catmus-medieval}.}
-%     \label{fig:initialization-datasets}
 % \end{figure}
 
 % \begin{figure}[H]
@@ -150,324 +371,6 @@ Table~\ref{tab:dataset-splits} gives the number of training, validation, and tes
 %         \includegraphics[width=\linewidth]{graphics/rq3_rasm2018_2019.jpg}
 %         \caption{RASM2018/2019.}
 %     \end{subfigure}
-%     \caption{Example pages of the seven RQ3 collections with their ground-truth text-line polygons overlaid: Pinkas~\cite{Barakat2019Pinkas}, ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1}, RASAM~\cite{VidalGorene2021RASAM}, Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT}, NorHand v3~\cite{Beyer2023NorHand}, GRPOLY-DB~\cite{Gatos2015GRPOLY}, and RASM2018/2019~\cite{KeinanSchoonbaert2019RASM}. Generated from the respective datasets.}
+%     \caption[Example pages of the seven RQ3 collections]{Example pages of the seven RQ3 collections with ground-truth line polygons. Generated from Pinkas~\cite{Barakat2019Pinkas}, ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1}, RASAM~\cite{VidalGorene2021RASAM}, Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT}, NorHand v3~\cite{Beyer2023NorHand}, GRPOLY-DB~\cite{Gatos2015GRPOLY}, and RASM2018/2019~\cite{KeinanSchoonbaert2019RASM}.}
 %     \label{fig:dataset-examples}
 % \end{figure}
-
-\section{Evaluation Metrics}
-\label{metrics}
-
-Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~\cite{diva_tool}: Pixel Intersection over Union (Pixel IU), Line Intersection over Union (Line IU), Detection Rate (DR), Recognition Accuracy (RA), and F-Measure (FM). For U-DIADS-TL, the FEST evaluator is used instead~\cite{Zottin_2025_FEST}.
-
-\begin{enumerate}
-    \item \Gls{pixeliu} measures the overlap between predicted and ground-truth foreground pixels:
-    \[\text{Pixel IU} = \frac{TP}{TP + FP + FN}.\]
-
-    \item \Gls{lineiu} applies the same intersection-over-union principle at the text-line level:
-    \[\text{Line IU} = \frac{TP}{TP + FP + FN}.\]
-    Here, $TP$, $FP$, and $FN$ denote correctly detected, extra, and missed lines, respectively. A prediction is correct when both its pixel precision and recall are at least $75\%$.
-
-    \item \Gls{dr} measures the proportion of ground-truth lines that are matched:
-    \[\text{DR} = \frac{M}{N_1},\]
-    where $M$ is the number of matched lines and $N_1$ is the number of ground-truth lines.
-
-    \item \Gls{ra} measures the proportion of predicted lines that are matched:
-    \[\text{RA} = \frac{M}{N_2},\]
-    where $N_2$ is the number of predicted lines.
-
-    \item \Gls{fm} is the harmonic mean of DR and RA:
-    \[\text{FM} = \frac{2\cdot\text{DR}\cdot\text{RA}}{\text{DR}+\text{RA}}.\]
-\end{enumerate}
-
-\section{Backbones}
-\label{sec:backbones}
-
-All segmentation approaches of Section~\ref{sec:tls-methods} are evaluated with the same encoders, which are combined with several initializations.
-
-\subsection{Encoder Architectures}
-\label{sec:encoder-architectures}
-
-Three encoder architectures are compared: ConvNeXt~\cite{liu2022convnet2020s} as a modern convolutional network, the Pyramid Vision Transformer v2 (PVTv2) as a hierarchical transformer, and the plain \gls{vit}~\cite{dosovitskiy2021imageworth16x16words}. ConvNeXt and PVTv2 produce feature maps at four resolutions with strides of 4 to 32 pixels. A \gls{vit} produces a single feature map with a stride of 16 pixels, which is transformed into a feature pyramid: transposed convolutions upsample it to strides of 4 and 8 pixels, and max-pooling downsamples it to a stride of 32 pixels.
-
-\subsection{Initializations}
-\label{sec:initializations}
-
-Five initialization strategies are considered. They determine the encoder's starting weights:
-\begin{itemize}
-    \item \textbf{Random.} The encoder weights are initialized randomly.
-    \item \textbf{ImageNet.} The encoder uses weights obtained by supervised image-classification pretraining on ImageNet~\cite{deng2009imagenet,russakovsky2015imagenet}.
-    \item \textbf{DINOv3 (LVD-1689M).} The encoder uses weights released by Meta, obtained by self-supervised DINOv3 pretraining on LVD-1689M~\cite{dinov3}.
-    \item \textbf{DINOv3 (cBAD).} Knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} transfers representations from a frozen DINOv3 ViT-B/16 teacher pretrained on LVD-1689M~\cite{dinov3} to the encoder using unlabeled cBAD 2019 pages~\cite{cbad-2019}. Training uses LightlyTrain~0.15.0 DistillationV3 (Table~\ref{tab:distillation}).
-    \item \textbf{CATMuS.} The weights pretrained with supervision on CATMuS Medieval line polygons. The resulting encoder and task-head weights are used for further fine-tuning (Table~\ref{tab:catmus-pretraining}).
-\end{itemize}
-
-\begin{table}[htbp]
-    \centering
-    \caption{DINOv3 (cBAD) distillation settings.}
-    \label{tab:distillation}
-    \small
-    \setlength{\tabcolsep}{5pt}
-    \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.35cm}X@{}}
-        \toprule
-        Setting & Value \\
-        \midrule
-        Training data   & 3,021 cBAD 2019 pages, unlabeled \\
-        Students        & ConvNeXt-Tiny, PVTv2-B2, and ViT-Small; random initialization \\
-        Epochs          & 1,100 (ConvNeXt-Tiny); 300 (PVTv2-B2 and ViT-Small) \\
-        Input size      & \(224\times224\)-pixel random crops \\
-        Batch size      & 128 effective, reached by gradient accumulation \\
-        Optimizer       & AdamW; peak learning rate \(1.44\times10^{-4}\) \\
-        Weight decay    & 0.04 (excluding bias, normalization, and token parameters) \\
-        LR schedule     & cosine decay with 10-epoch linear warm-up \\
-        Augmentation    & Random resized crops (scale 0.14--1.0), horizontal flip, color jitter, grayscale conversion, Gaussian blur \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\begin{table}[htbp]
-    \centering
-    \caption{CATMuS pretraining settings.}
-    \label{tab:catmus-pretraining}
-    \small
-    \setlength{\tabcolsep}{4pt}
-    \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.65cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
-        \toprule
-        Setting & Mask R-CNN & RT-DETR \\
-        \midrule
-        Data             & \multicolumn{2}{l}{1,335 CATMuS Medieval training pages and 191 validation pages} \\
-        Supervision     & line masks & line boxes \\
-        Epochs          & 30 & 10 \\
-        Input size      & \(704\times704\) & \(1152\times1152\) \\
-        Batch size      & 1 & 1, gradient accumulation over 2 steps \\
-        Optimizer       & \multicolumn{2}{l}{AdamW; weight decay \(10^{-4}\)} \\
-        Learning rate   & \(10^{-4}\) encoder, \(10^{-3}\) heads & \(10^{-4}\) \\
-        LR schedule     & cosine & constant, no warm-up \\
-        Augmentation    & \multicolumn{2}{l}{Color jitter; no geometric augmentation} \\
-        Model selection & mask AP@0.50 every five epochs & box AP@[0.50:0.95] every epoch; raw or EMA weights (decay 0.993) \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\subsection{Encoder Size}
-\label{sec:encoder-size}
-
-The encoders are grouped by parameter count into three brackets: XS (fewer than 8M parameters), S (8M to 20M), and M (more than 20M). Table~\ref{tab:backbones} lists the encoders of each bracket. The main comparison uses the M bracket, ConvNeXt-Tiny, PVTv2-B2, and ViT-Small, since DINOv3 (LVD-1689M) exist only for M bracket models. The smaller brackets are used only in the encoder-size ablation study (Appendix~\ref{app:rq1-size}).
-
-\begin{table}[htbp]
-    \centering
-    \caption{Encoder weights by size bracket.}
-    \label{tab:backbones}
-    \small
-    \begin{tabular}{@{}llll@{}}
-        \toprule
-        Family & XS & S & M \\
-        \midrule
-        ConvNeXt  & Femto (4.8M) & Pico (8.5M) & Tiny (27.8M) \\
-        PVTv2     & B0 (3.4M) & B1 (13.5M) & B2 (24.9M) \\
-        \gls{vit} & Tiny (5.5M) & -- & Small (21.7M) \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\section{Text Line Segmentation Methods}
-\label{sec:tls-methods}
-
-Three segmentation approaches are evaluated: semantic segmentation, two-stage detection and segmentation, and instance segmentation. All three use the encoders of Section~\ref{sec:backbones} and handle both ground-truth formats, binary line masks and PAGE XML polygons.
-
-\subsection{Semantic Segmentation}
-\label{sec:semantic-postprocessing}
-
-The semantic segmentation model predicts a single text-line probability map, which postprocessing splits into line instances (Figure~\ref{fig:semantic-postprocessing} and Algorithm~\ref{alg:semantic-postprocessing}). The map is binarized, and small components are removed. For each remaining component, the row-wise pixel sum forms a horizontal projection: peaks mark candidate line centers, and a sufficiently deep valley between two peaks marks a cut position. Only the mask preparation, the cut shape, and the output representation depend on the ground-truth format. For binary line masks, the baseline prediction of ARU-Net~\cite{gruning2019arunet} is binarized with Otsu's method~\cite{otsu1979threshold}, thinned, and fused with the mask, and lines are separated along minimum-energy seams through background gaps. For PAGE XML, morphological closing first joins fragmented characters and words; lines are separated by straight horizontal cuts, and the components are clipped to the annotated main text region, filtered, and exported as PAGE XML polygons.
-
-\begin{figure}[htbp]
-    \centering
-    \input{graphics/semantic_gt_workflow}
-    \caption{Semantic postprocessing by ground-truth format. For each component, \(q\) is the smoothed row projection and \(\rho\) is the valley-depth threshold. An accepted peak pair triggers either a minimum-energy seam or a horizontal cut. Gray blocks show processing steps; dashed blocks show output construction.}
-    \label{fig:semantic-postprocessing}
-\end{figure}
-
-\begin{algorithm}[htbp]
-    \small
-    \caption{Ground-truth-format-specific postprocessing of a semantic text-line probability map}
-    \label{alg:semantic-postprocessing}
-    \KwIn{Probability map \(P\), page image \(I\), ground-truth representation \(GT\), and main text-region mask \(R\), when available}
-    \KwOut{Individual text-line components}
-
-    \(M \leftarrow\) binarize \(P\) and remove small foreground components\;
-
-    \eIf{\(GT=\text{binary mask}\)}{
-        \(B \leftarrow\) apply Otsu thresholding to the ARU-Net baseline prediction for \(I\)\;
-        Thin \(B\), combine it with \(M\), and remove small components\;
-        \(C \leftarrow\) minimum-energy seam\;
-    }{
-        Join character and word fragments using morphological closing\;
-        \(C \leftarrow\) straight horizontal cut\;
-    }
-
-    Find projection peaks and valleys in each connected component of \(M\)\;
-    Separate merged lines through accepted valleys using \(C\)\;
-    Remove small fragments created by the cuts\;
-
-    \eIf{\(GT=\text{binary mask}\)}{
-        \Return{the connected components of \(M\) as text-line instances}\;
-    }{
-        Clip \(M\) to \(R\)\;
-        Discard components that are too small, too short, or insufficiently wide\;
-        Convert the remaining components to polygons and baselines in PAGE XML\;
-        \Return{the PAGE XML text-line polygons}\;
-    }
-\end{algorithm}
-
-\subsection{Two-Stage Detection and Segmentation}
-\label{sec:two-stage-method}
-
-The two-stage method separates line localization from boundary prediction (Figure~\ref{fig:two-stage-method}). An RT-DETR detector~\cite{Zhao_2024_CVPR} predicts one bounding box per text line on the complete page; the confidence threshold is selected on the validation split, and duplicate detections are removed. Each line thus receives its own candidate region, so neighboring lines cannot merge into one component.
-
-\begin{figure}[htbp]
-    \centering
-    \input{graphics/two_stage_gt_workflow}
-    \caption{Two-stage text-line segmentation workflow. Solid arrows show inference, while dashed arrows show supervision used during training.}
-    \label{fig:two-stage-method}
-\end{figure}
-
-A U-Net~\cite{DBLP:journals/corr/RonnebergerFB15} with a ResNet-34 encoder then segments each line crop. Its training targets are derived from the ground truth: each PAGE XML polygon, or each component of a binary mask, defines a bounding box, and the line mask inside this box forms the target; for binary masks, only the connected component is used as a label. The box is padded to preserve context, and crop and target are resized to a common elongated input size. In the detector-backbone comparison, the crop U-Net is kept fixed, so that differences are attributable to the detector.
-
-The crop U-Net is trained on \(1024\times256\)-pixel crops with a padding of 15 pixels for 50 epochs, using AdamW with a learning rate of \(3\times10^{-4}\), a weight decay of \(10^{-4}\), and a batch size of four; the checkpoint with the highest validation Dice score is kept. Three segmentation losses are compared: binary cross-entropy (BCE), the Tversky loss~\cite{salehi2017tversky} with \(\alpha=0.3\) and \(\beta=0.7\), which weights missed foreground pixels more strongly than false positives, and the connectivity-preserving SuperVoxel loss~\cite{grim2025supervoxel} with \(\alpha=\beta=0.5\), which penalizes split and merged components. The Tversky and SuperVoxel models are warmed up with BCE for the first ten epochs. The crop U-Net is trained with the Tversky loss as a result of an ablation study described in Appendix~\ref{app:rq1-extra}.
-
-At inference, each detection is padded in the same way and segmented independently. The probability map is resized to the native crop size before thresholding, and only its main connected component is kept. For binary-mask datasets, a horizontal morphological closing can additionally join fragmented line parts. The binarization threshold (0.5, 0.7, or 0.9) and the closing width (none or 4\% of the crop width) are selected per detector on the validation split by the mean line-level \gls{fm}, like the detection threshold. The crop masks are pasted into an empty page-sized instance map in descending confidence order, without overwriting pixels already assigned. For PAGE XML datasets, detections are restricted to the annotated main text region, overlapping row detections are removed, and a validation-selected width filter discards short detections. The largest contour of each crop mask becomes the text-line polygon, and the bottom of that polygon defines the baseline.
-
-\subsection{Instance Segmentation}
-\label{sec:mask-rcnn-method}
-
-Mask R-CNN~\cite{he2017maskrcnn} treats every text line as a separate object of a single foreground class (Figure~\ref{fig:mask-rcnn-architecture}). A region proposal network generates candidate boxes; RoIAlign extracts aligned features for each proposal, from which parallel heads classify the proposal, refine its box, and predict its mask. Because every accepted proposal has its own mask, neighboring or overlapping lines remain separate.
-
-\begin{figure}[htbp]
-    \centering
-    \input{graphics/mask_rcnn_gt_workflow}
-    \caption{Mask R-CNN workflow adapted from He et al.~\cite{he2017maskrcnn} to the evaluated backbones and ground-truth formats. (a) Both formats provide per-line boxes, masks, and labels for training. (b) Both use the detection and mask heads; for binary-mask datasets, the crop U-Net replaces the ROI masks before the instance map is assembled, whereas PAGE XML datasets produce polygons and baselines.}
-    \label{fig:mask-rcnn-architecture}
-\end{figure}
-
-Each page is resized with preserved aspect ratio onto a white square canvas of \(704\times704\) pixels for DIVA-HisDB and \(1024\times1024\) pixels for U-DIADS-TL. Each Task~2 PAGE XML polygon of DIVA-HisDB, or each retained component of a U-DIADS-TL mask, yields one bounding box and one instance mask. Training augmentation is limited to brightness, contrast, saturation, and hue changes, so that the instance geometry remains aligned with the page.
-
-The encoder feature maps (Section~\ref{sec:encoder-architectures}) feed a common 256-channel feature pyramid with identical proposal, box, and mask heads for all encoders; the COCO-pretrained ResNet-50 Mask R-CNN serves as an additional reference. The anchors use line-oriented aspect ratios. The box and mask predictors are reinitialized for the background and text-line classes, whereas the other heads keep their COCO initialization. The mask loss is binary cross-entropy, and the checkpoint is selected on the validation split.
-
-At inference, detections are processed in descending confidence order, and their masks are restored to the original page resolution. On DIVA-HisDB, the confidence threshold is selected on the validation split by minimizing the absolute error of the predicted line count, and the mask threshold is fixed at 0.5. Each mask is clipped to the annotated main text region, its largest contour is exported as a PAGE XML polygon, and the lower edge of its bounding rectangle defines the baseline.
-
-On U-DIADS-TL, the coarse ROI masks do not match the pixel-accurate binary ground truth. The ROI masks are therefore replaced by the crop U-Net of the two-stage method (Section~\ref{sec:two-stage-method}), while Mask R-CNN still supplies the proposals, their scores, and the instance identities. Each accepted box is padded, the crop is resized to \(1024\times256\) pixels and segmented, and the thresholded mask is pasted into the page-sized instance map without overwriting pixels of more confident instances. The confidence threshold is selected on the validation split by the box F1 score at an IoU of 0.5; the padding, the crop-mask threshold, and a minimum instance area are then selected on the validation split by \gls{fm}. Table~\ref{tab:rq1-maskrcnn-mask-vs-crop} compares these refined masks with the native ROI masks.
-
-\FloatBarrier
-\section{Shot Selection Methods}
-\label{sec:shot-sampling}
-
-The shot-selection procedure chooses \(k\) pages from a pool of \(N\) training candidates. The six strategies comprise two baselines and four combinations of an embedding method and a geometric selection rule.
-
-\paragraph{Baseline Strategies}
-\begin{itemize}
-    \item \emph{Grayscale variance} ranks each page \(I_i\) by
-    \[
-        v_i = \frac{1}{H_i W_i}
-        \sum_{x=1}^{W_i}\sum_{y=1}^{H_i}
-        \left(I_i(x,y)-\bar{I}_i\right)^2,
-    \]
-    where \(H_i\), \(W_i\), and \(\bar{I}_i\) denote its height, width, and mean intensity. The strategy selects the \(k\) largest scores.
-    \item \emph{Random sampling} selects \(k\) pages without replacement from the lexicographically sorted candidates using seed 42.
-\end{itemize}
-
-\paragraph{Embedding Construction}
-The remaining strategies use 512-dimensional full-page features \(\mathbf{z}_i\) from an ImageNet-pretrained ResNet-18 without its classification layer~\cite{He_2016_CVPR}. Each page is resized to \(720\times720\) pixels and ImageNet-normalized, and each feature dimension is standardized across the candidate pool. Both methods below reduce the features from 512 to 2 dimensions, representing each page as a point \(\mathbf{y}_i \in \mathbb{R}^2\):
-\begin{itemize}
-    \item \Gls{pca} projects the features onto the two eigenvectors of the sample covariance matrix with the largest eigenvalues. These vectors form an orthonormal basis for the selected two-dimensional subspace, which retains the maximum possible variance. The resulting components are uncorrelated, but not necessarily statistically independent~\cite{Jolliffe2016PCA}.
-    \item \Gls{ica}, computed with FastICA, seeks two statistically independent components by maximizing non-Gaussianity after whitening, which removes correlations and scales the retained components to unit variance. Its objective is independence rather than maximum retained variance; the resulting directions need not be orthogonal in the original feature space, and the components are not ordered by explained variance~\cite{Hyvarinen1999FastICA}. FastICA uses seed 42, at most 10,000 iterations, and a tolerance of \(10^{-5}\).
-\end{itemize}
-
-\paragraph{Selection Rules}
-\begin{itemize}
-    \item The \emph{max--min distance} rule selects the size-\(k\) subset with the largest minimum pairwise distance,
-    \[
-        S_{\mathrm{max\text{-}min}}^{*}
-        = \underset{S \subseteq \{1,\ldots,N\},\,|S|=k}{\operatorname{arg\,max}}
-          \;\underset{\substack{i,j\in S\\i\neq j}}{\operatorname{min}}
-          \lVert \mathbf{y}_i-\mathbf{y}_j \rVert_2.
-    \]
-    For \(k=1\), all singleton scores are zero, so the first sorted page is returned.
-    \item The \emph{farthest-from-centroid} rule selects the size-\(k\) subset with the largest total distance from the embedding centroid,
-    \[
-        \bar{\mathbf{y}} = \frac{1}{N}\sum_{i=1}^{N}\mathbf{y}_i,
-        \qquad
-        S_{\mathrm{centroid}}^{*}
-        = \underset{S \subseteq \{1,\ldots,N\},\,|S|=k}{\operatorname{arg\,max}}
-          \sum_{i\in S}\lVert\mathbf{y}_i-\bar{\mathbf{y}}\rVert_2.
-    \]
-    This is equivalent to selecting the \(k\) largest individual distances.
-\end{itemize}
-The max--min rule maximizes mutual separation, whereas the centroid rule selects peripheral points independently. 
-Figures~\ref{fig:shot-sampling-pca} and~\ref{fig:shot-sampling-ica} illustrate both rules for \(k=5\). Page identifiers mark pages selected by at least one rule.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.96\linewidth]{graphics/shot_sampling_pca.pdf}
-    \caption{\Gls{pca} projections of twenty training pages per DIVA-HisDB manuscript for five-shot selection. Panels show CB55, CS18, and CS863 from top to bottom. Blue dots represent candidate pages; red circles mark max--min distance selections, green squares mark farthest-from-centroid selections, and black crosses indicate centroids. Page identifiers label selected pages. Generated from DIVA-HisDB~\cite{diva_hisdb}.}
-    \label{fig:shot-sampling-pca}
-\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.96\linewidth]{graphics/shot_sampling_ica.pdf}
-    \caption{\Gls{ica} projections of twenty training pages per DIVA-HisDB manuscript for five-shot selection. Panels show CB55, CS18, and CS863 from top to bottom. Blue dots represent candidate pages; red circles mark max--min distance selections, green squares mark farthest-from-centroid selections, and black crosses indicate centroids. Page identifiers label selected pages. Generated from DIVA-HisDB~\cite{diva_hisdb}.}
-    \label{fig:shot-sampling-ica}
-\end{figure}
-
-\section{Cross-Generalization Methods}
-\label{sec:cross-generalization}
-
-RQ3 examines whether a model trained on a few pages of one or more collections transfers to a collection that is never seen during training. It uses the seven cross-collection datasets of Section~\ref{sec:datasets}.
-
-\subsection{Collection Partitions}
-
-Each collection is partitioned once with seed 42 (Table~\ref{tab:dataset-splits}): three pages are drawn for training, 10\% of the pages, rounded to the nearest integer, for validation, and the remaining pages form the test set. Pinkas and NorHand v3 keep their official test sets and draw their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages. All line polygons are converted to instance masks, and pages with missing polygons or polygons with fewer than three vertices are excluded.
-
-\subsection{Model and Training}
-
-All experiments use the Mask R-CNN of Section~\ref{sec:mask-rcnn-method}, using the CATMuS-pretrained proposal network, and applying scale jitter during training. Table~\ref{tab:rq3-training-settings} lists the model, augmentation, and optimization settings. The configuration is selected by mean source-validation \gls{fm} in the ablation of Appendix~\ref{app:rq3-extra}. Score and mask thresholds are selected by validation \gls{fm}, with \gls{pixeliu} as the tie-breaker.
-
-\begin{table}[htbp]
-    \centering
-    \caption{Cross-generalization model, training, and prediction settings.}
-    \label{tab:rq3-training-settings}
-    \small
-    \setlength{\tabcolsep}{5pt}
-    \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}X@{}}
-        \toprule
-        Setting & Value \\
-        \midrule
-        Encoder / initialization & ConvNeXt-Tiny / CATMuS \\
-        Input canvas & \(1152\times1152\) pixels, white padding \\
-        Anchor sizes & 32--512 pixels \\
-        Anchor ratios (height/width) & 0.05, 0.1, 0.2, 0.5, 1.0 \\
-        Scale jitter: enlargement & Probability 0.5; \(s\sim\mathcal{U}(1,1.6)\), followed by a random \(1152\times1152\)-pixel crop; retain instances with at least 50\% of their mask area inside the crop \\
-        Scale jitter: reduction & Otherwise, \(s\sim\mathcal{U}(0.8,1)\), followed by fitting onto the canvas \\
-        Additional augmentation & Photometric augmentation \\
-        Epochs / batch size & 50 / 1 page \\
-        Optimizer & AdamW; weight decay \(10^{-4}\) \\
-        Learning rates & \(10^{-3}\) for heads; \(10^{-4}\) for backbone \\
-        Schedule / precision & Cosine decay / mixed precision \\
-        Detection limit & 300 per page \\
-        Score-threshold candidates & 0.3, 0.5, 0.7, 0.9 \\
-        Mask-threshold candidates & 0.3, 0.5 \\
-        Zero-shot thresholds & Score: 0.3; mask: 0.3 (fixed) \\
-        Baseline extraction & Contour points within 2 pixels of its lowest point \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Masks are assigned in descending confidence order and restored to page resolution. The largest contour of each mask defines its text-line polygon; points near its lowest point define the baseline using the tolerance in Table~\ref{tab:rq3-training-settings}. Predictions are not clipped to a main-text region because the collections do not provide one.
-
-\subsection{Transfer Protocols}
-
-Three experiments are conducted:
-\begin{itemize}
-    \item \textbf{Zero-shot.} The CATMuS-pretrained model is applied without fine-tuning, using the fixed thresholds in Table~\ref{tab:rq3-training-settings}.
-    \item \textbf{Protocol~A.} One model is trained on the three training pages of each collection, its thresholds are selected on the validation pages of that collection, and it is applied unchanged to all seven test sets. The diagonal of the resulting \(7\times7\) matrix is the in-domain result, and the off-diagonal cells measure zero-shot transfer.
-    \item \textbf{Protocol~B.} For each held-out collection, a \gls{loco} model is trained on \(k\in\{1,2,3\}\) pages from each of the six other collections, that is, on 6, 12, or 18 pages (\gls{loco}-1, \gls{loco}-2, and \gls{loco}-3). The page sets are nested and taken from the protocol-A training pages. The thresholds are selected on up to three validation pages per source collection, so the held-out collection takes no part in training or selection. The result is compared with the in-domain result and with the best off-diagonal protocol-A entry of the same column, which is an optimistic reference because it is identified on test results.
-\end{itemize}
