@@ -195,21 +195,22 @@ Two initializations of Section~\ref{sec:initializations} require an additional t
     \centering
     \caption{Pretraining on CATMuS Medieval.}
     \label{tab:catmus-pretraining}
-    \footnotesize
-    \setlength{\tabcolsep}{4pt}
-    \begin{tabular}{@{}llll@{}}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}lllll@{}}
         \toprule
-        & Mask R-CNN & RT-DETR & Center-line \\
+        & Mask R-CNN & RT-DETR & BBox U-Net & Center-line \\
         \midrule
-        Data & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,334 pages\(^{a}\) \\
-        Supervision & line masks & line boxes & center lines, ends, distances \\
-        Length & 30 epochs & 10 epochs & 12,000 steps \\
-        Input & \(704^2\) & \(1152^2\) & \(512^2\) crops\(^{b}\) \\
-        Batch size & 1 & 1 (\(\times\)2 accum.) & 4 \\
-        Learning rate\(^{c}\) & \(10^{-3}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
-        Schedule & cosine & constant & one-cycle \\
-        Augmentation & color jitter & color jitter & B/C, blur \\
-        Checkpoint & val.\ mask AP@0.5 & val.\ box AP@[0.5:0.95] & final \\
+        Data & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,334 pages\(^{a}\) \\
+        Supervision & line masks & line boxes & line masks in boxes & center lines, ends, distances \\
+        Length & 30 epochs & 30 epochs & 10 epochs & 12,000 steps \\
+        Input & \(704^2\) & \(1152^2\) & \(1024\times256\) crops & \(512^2\) crops\(^{b}\) \\
+        Batch size & 1 & 1 (\(\times\)2 accum.) & 8 & 4 \\
+        Learning rate\(^{c}\) & \(10^{-3}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
+        Schedule & cosine & constant & constant & one-cycle \\
+        Loss & Mask R-CNN loss & RT-DETR loss & BCE, then Tversky & BCE + Dice, \(L_1\) \\
+        Augmentation & color jitter & color jitter & B/C, affine, noise & B/C, blur \\
+        Checkpoint & val.\ mask AP@0.5 & val.\ box AP@[0.5:0.95] & val.\ Dice & final \\
         \bottomrule
     \end{tabular}
     \par\smallskip
