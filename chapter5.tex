@@ -302,7 +302,7 @@ Figure~\ref{fig:rq2-pretraining-shots} shows that a single page is not sufficien
 \section{Cross-Collection Transfer}
 \label{sec:results-rq3}
 
-In all three transfer settings, the center-line model transfers to new collections better than Mask R-CNN. Since the center-line decoding rules were selected on training and validation pages of the seven collections, zero-shot here means that the network weights are not fine-tuned on the target collection.
+In all transfer settings, the center-line model transfers to new collections better than Mask R-CNN. Since the center-line decoding rules were selected on training and validation pages of the seven collections, zero-shot here means that the network weights are not fine-tuned on the target collection.
 
 \FloatBarrier
 \subsection{Zero-Shot Transfer}
@@ -339,11 +339,11 @@ As shown in Table~\ref{tab:rq3-zeroshot}, the center-line model transfers well w
 \subsection{Single-Collection Transfer}
 \label{sec:results-rq3-protocol-a}
 
-Fine-tuning on three pages of one collection improves Mask R-CNN in-domain, but its result drops on the other collections (Table~\ref{tab:rq3-matrix-ab-fm}). It reaches 88.61\% in-domain and 70.56\% on the other collections. Additionally, its result on GRPOLY-DB depends on the source collection.
+Fine-tuning on three pages of one collection improves Mask R-CNN in-domain, but its result drops on the other collections (Table~\ref{tab:rq3-matrix-ab-fm}). It reaches 88.61\% in-domain and 70.55\% on the other collections. Additionally, its result on GRPOLY-DB depends on the source collection.
 
 \begin{table}[H]
     \centering
-    \caption{Single-collection transfer matrix of Mask R-CNN (\gls{fm}).}
+    \caption{Single-collection transfer matrix of Mask R-CNN (fine-tuned weights, \(\alpha=1\), \gls{fm}).}
     \label{tab:rq3-matrix-ab-fm}
     \footnotesize
     \setlength{\tabcolsep}{3pt}
@@ -361,7 +361,7 @@ Fine-tuning on three pages of one collection improves Mask R-CNN in-domain, but 
         GRPOLY & 54.70 & 85.75 & 72.39 & 76.98 & 19.93 & \cellcolor{gray!20}99.30 & 58.25 & 66.76 & 61.33 \\
         NorHand & 77.14 & 93.48 & 90.11 & 85.95 & 52.51 & 98.25 & \cellcolor{gray!20}86.84 & 83.47 & 82.91 \\
         \midrule
-        Transfer into & 77.08 & 88.41 & 85.73 & 83.65 & 45.49 & 45.88 & 67.65 & & \\
+        Transfer into & 77.08 & 88.41 & 85.73 & 83.65 & 45.49 & 45.88 & 67.65 & 73.13 & 70.55 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -370,7 +370,7 @@ The center-line model keeps most of its in-domain quality on the other collectio
 
 \begin{table}[htbp]
     \centering
-    \caption{Single-collection transfer matrix of the center-line model (\gls{fm}).}
+    \caption{Single-collection transfer matrix of the center-line model (\gls{wiseft}, \(\alpha=0.5\), \gls{fm}).}
     \label{tab:rq3-matrix-center-line-fm}
     \footnotesize
     \setlength{\tabcolsep}{3pt}
@@ -388,12 +388,12 @@ The center-line model keeps most of its in-domain quality on the other collectio
         GRPOLY & 83.74 & 95.91 & 93.35 & 92.46 & 91.27 & \cellcolor{gray!20}99.76 & 93.82 & 92.90 & 91.76 \\
         NorHand & 83.36 & 94.83 & 93.24 & 92.17 & 90.04 & 98.27 & \cellcolor{gray!20}93.80 & 92.24 & 91.98 \\
         \midrule
-        Transfer into & 84.13 & 94.56 & 93.29 & 91.74 & 87.28 & 97.90 & 90.65 & & \\
+        Transfer into & 84.13 & 94.56 & 93.29 & 91.74 & 87.28 & 97.90 & 90.65 & 91.74 & 91.36 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-As shown in Table~\ref{tab:rq3-center-line-components}, \gls{wiseft} improves the transfer of the center-line model. Every interpolation transfers better than the fine-tuned model, and the mean transfer rises from 83.88\% at \(\alpha=1\) to 91.98\% at \(\alpha=0.25\). However, for Mask R-CNN, the best interpolation reaches 71.43\% at \(\alpha=0.75\), which is 0.87 percentage points above the fine-tuned model.
+As shown in Table~\ref{tab:rq3-center-line-components}, \gls{wiseft} improves the transfer of the center-line model. Every interpolation transfers better than the fine-tuned model, and the mean transfer rises from 83.88\% at \(\alpha=1\) to 91.98\% at \(\alpha=0.25\). Additionally, its worst target collection, that is, the lowest value of the row ``Transfer into'' of the transfer matrix, rises from 72.76\% at \(\alpha=1\) to 84.13\% at \(\alpha=0.5\), the weight of the center-line matrix in Table~\ref{tab:rq3-matrix-center-line-fm}. However, for Mask R-CNN, the best interpolation reaches 71.43\% at \(\alpha=0.75\), which is 0.87 percentage points above the fine-tuned model, and its worst target collection is highest for the fine-tuned model.
 
 \begin{table}[htbp]
     \centering
@@ -404,13 +404,13 @@ As shown in Table~\ref{tab:rq3-center-line-components}, \gls{wiseft} improves th
         \toprule
         & \multicolumn{2}{c}{Center-line model} & \multicolumn{2}{c}{Mask R-CNN} \\
         \cmidrule(lr){2-3}\cmidrule(l){4-5}
-        \(\alpha\) & Mean transfer & Lowest transfer & Mean transfer & Lowest transfer \\
+        \(\alpha\) & Mean transfer & Worst target & Mean transfer & Worst target \\
         \midrule
-        0.00 & 91.67 & \textbf{84.42} & 44.26 & 3.00 \\
-        0.25 & \textbf{91.98} & 83.27 & 62.45 & 8.08 \\
-        0.50 & 91.36 & 82.09 & 68.91 & 16.78 \\
-        0.75 & 89.06 & 80.28 & \textbf{71.43} & \textbf{29.03} \\
-        1.00 & 83.88 & 69.64 & 70.56 & 28.21 \\
+        0.00 & 91.67 & 83.97 & 44.26 & 0.06 \\
+        0.25 & \textbf{91.98} & 84.10 & 62.45 & 0.11 \\
+        0.50 & 91.36 & \textbf{84.13} & 68.91 & 8.13 \\
+        0.75 & 89.06 & 82.75 & \textbf{71.43} & 31.23 \\
+        1.00 & 83.88 & 72.76 & 70.55 & \textbf{45.49} \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -465,5 +465,42 @@ The number of source pages has little effect on the center-line model (Table~\re
         \bottomrule
     \end{tabular}
 \end{table}
+
+\FloatBarrier
+\subsection{Continuous Hold-Out Transfer}
+\label{sec:results-rq3-stepdown}
+
+The transfer of Mask R-CNN depends on which collections remain among the sources (Table~\ref{tab:rq3-stepdown}). GRPOLY-DB lies apart from the other collections and is held out first, and NorHand v3 and RASAM are its nearest collections (Figure~\ref{fig:rq3-collection-pc1}). As long as these two collections remain among the sources, Mask R-CNN reaches 95.89--99.59\% on GRPOLY-DB. Without them, its result drops to 31.21\%, and with only Pinkas and Phil.\ gr.\ 130 to 0.81\%.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Continuous hold-out transfer to GRPOLY-DB (\gls{fm}).}
+    \label{tab:rq3-stepdown}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}c lcc lcc@{}}
+        \toprule
+        & \multicolumn{3}{c}{Most distant held out first} & \multicolumn{3}{c}{Nearest held out first} \\
+        \cmidrule(lr){2-4}\cmidrule(l){5-7}
+        Sources & Held out & Mask R-CNN & Center-line & Held out & Mask R-CNN & Center-line \\
+        \midrule
+        6 & -- & 99.01 & 98.96 & -- & 99.01 & 98.96 \\
+        5 & Phil. & 95.89 & 99.21 & NorHand & 69.29 & 98.76 \\
+        4 & Pinkas & 97.86 & 98.46 & RASAM & 31.21 & 99.04 \\
+        3 & RASM & 99.59 & 97.61 & ONB & 31.76 & 99.38 \\
+        2 & ONB & 99.36 & 97.75 & RASM & 0.81 & 98.72 \\
+        1 & RASAM & 98.25 & 98.27 & Pinkas & 1.08 & 97.59 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{graphics/rq3_collection_pc1.pdf}
+    \caption{Cross-collection datasets on the first principal component of the mean page features (large markers: collections, small markers: pages).}
+    \label{fig:rq3-collection-pc1}
+\end{figure}
+
+The center-line model stays between 97.59\% and 99.38\% in both orders. Since each source collection contributes three pages, the number of training pages decreases together with the number of source collections. The values with six source collections come from a repeated \gls{loco}-3 training, in which Mask R-CNN reaches 99.01\% instead of 99.33\%, and the values with one source collection from Tables~\ref{tab:rq3-matrix-ab-fm} and~\ref{tab:rq3-matrix-center-line-fm}.
 
 \endgroup
