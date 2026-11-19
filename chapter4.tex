@@ -1,13 +1,14 @@
 % !TeX root = main.tex
-\chapter{Experimental Setup}
-\label{ch:data}
+\chapter{Experiments and Results}
+\label{ch:data}\label{ch:results}
 
-This chapter describes the data and the setup of the experiments to fulfill the \glspl{rq}. Section~\ref{sec:datasets} introduces the eleven datasets and their roles, and Section~\ref{metrics} defines the evaluation metrics. Section~\ref{sec:training-setup} then gives the training settings of the pipelines, Section~\ref{sec:page-selection-setup} the page selection of the page-count study, and Section~\ref{sec:cross-generalization} the setup of the cross-generalizatio  experiments.
+This chapter describes the data and the setup of the experiments and presents the results in the order of the \glspl{rq}. Section~\ref{sec:datasets} introduces the eleven datasets and their roles, and Section~\ref{metrics} defines the evaluation metrics. The training settings of the pipelines are given in Appendix~\ref{app:training-settings}. Sections~\ref{sec:results-models} and~\ref{sec:results-reconstruction} answer \gls{rq}~1 with the encoders, initializations, and line reconstructions pipelines. Section~\ref{sec:results-rq2} reduces the number of training pages for \gls{rq}~2, and Section~\ref{sec:results-rq3} evaluates the transfer to other collections for \gls{rq}~3. All metrics are given in percent, and higher values are better.
+
 
 \section{Datasets}
 \label{sec:datasets}\label{sec:data-benchmarks}\label{sec:data-pretraining}\label{sec:data-cross}
 
-The experiments use eleven historical document datasets. DIVA-HisDB and U-DIADS-TL with published results are used to compare the pipelines, encoders, and initializations and to study the number of training pages. Two larger collections are used for the initializations: CATMuS Medieval for supervised pretraining and cBAD 2019 for unsupervised knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} with DINOv3 as the teacher model. The remaining seven collections form the pool for the cross-generalization experiments. Table~\ref{tab:dataset-splits} gives the number of training, validation, and test pages of each dataset. For U-DIADS-TL and DIVA-HisDB, the counts refer to each manuscript, and the partition of the seven cross-collection datasets is described in Section~\ref{sec:data-partitions}.
+As shown in Table~\ref{tab:dataset-splits}, the experiments use eleven historical document datasets. DIVA-HisDB and U-DIADS-TL are used to compare the pipelines, encoders, and initializations and to study the number of training pages. As shown in Figure~\ref{fig:gt-formats}, the two benchmarks use different \gls{gt} formats, binary line masks and line polygons  respectively, so every  \gls{tls} pipeline produces both. DIVA-HisDB~\cite{diva_hisdb} contains main text, glosses, decorations, and overlapping lines, and the experiments use its Task~2 PAGE XML annotations. Two larger collections are used for the initializations. CATMuS Medieval~\cite{catmus-medieval} is used for supervised pretraining on its line polygons. Its training split contains 15 pages of the three DIVA-HisDB manuscripts with the same line annotations, 14 of them DIVA-HisDB test pages. These 15 pages with 1,269 lines are removed. CATMuS Medieval contains none of the U-DIADS-TL manuscripts. cBAD 2019~\cite{cbad-2019} is used without labels for knowledge distillation~\cite{beyer2022knowledgedistillationgoodteacher} with DINOv3 as the teacher model. The remaining seven collections form the pool for the cross-collection experiments. They cover five scripts, Hebrew, Syriac, Arabic, Greek, and Latin, as well as different line structures, as shown in Figure~\ref{fig:rq3-collections}.
 
 \begin{table}[htbp]
     \centering
@@ -23,7 +24,7 @@ The experiments use eleven historical document datasets. DIVA-HisDB and U-DIADS-
         \midrule
         U-DIADS-TL \cite{Zottin_2025_FEST} & Latin, Syriac & 3/10/15 & Binary pixel-level line masks \\
         DIVA-HisDB \cite{diva_hisdb} & Latin, Italian & 20/10/10 & PAGE XML line polygons \\
-        CATMuS Medieval \cite{catmus-medieval} & Multilingual Latin script & 1335/191/-- & PAGE XML line polygons \\
+        CATMuS Medieval \cite{catmus-medieval} & Multilingual Latin script & 1320/191/--\textsuperscript{*} & PAGE XML line polygons \\
         cBAD 2019 \cite{cbad-2019,DiemKleberGatos2019} & Multilingual European collections & 755/755/1511 & PAGE XML regions and baselines \\
         Pinkas \cite{Barakat2019Pinkas} & Hebrew & 3/3/6 & PAGE XML line polygons \\
         ONB Cod.\ Syr.\ 1 \cite{AboudIshac2025ONBSyr1} & Syriac & 3/14/123 & PAGE XML line polygons \\
@@ -34,44 +35,8 @@ The experiments use eleven historical document datasets. DIVA-HisDB and U-DIADS-
         NorHand v3 \cite{Beyer2023NorHand} & Norwegian & 3/11/81 & PAGE XML line polygons \\
         \bottomrule
     \end{tabularx}
+    \par\smallskip\raggedright\textsuperscript{*}\,Without the 15 DIVA-HisDB pages of the original training split (1,335 pages).
 \end{table}
-
-The two benchmarks use different \gls{gt} formats, binary line masks and line polygons (Figure~\ref{fig:gt-formats}), so every pipeline has to produce both:
-\begin{itemize}
-    \item \textbf{U-DIADS-TL}~\cite{Zottin_2025_FEST} is the benchmark of the ICDAR 2025 FEST competition. It contains 28 pages from each of the manuscripts Latin2, Latin14396, and Syriaque 341, annotated with binary pixel-level line masks. The validation pages are used only for model and postprocessing selection.
-    \item \textbf{DIVA-HisDB}~\cite{diva_hisdb} contains 50 pages from each of Codex Bodmer 55 (CB55), Codex Sangallensis 18 (CS18), and Codex Sangallensis 863 (CS863), with main text, glosses, decorations, and overlapping lines. The experiments use the Task~2 PAGE XML annotations, which provide a polygon and a baseline for each text line.
-\end{itemize}
-The two initizalization corpora are much with 1,526 and 3,021 pages, but only CATMuS Medieval is annotated with line polygons (Figure~\ref{fig:initialization-datasets}):
-\begin{itemize}
-    \item \textbf{CATMuS Medieval}~\cite{catmus-medieval} contains medieval Latin-script manuscripts in Latin, French, Iberian, and Italian with PAGE XML line polygons, which are used for supervised pretraining.
-    \item \textbf{cBAD 2019}~\cite{cbad-2019} contains pages from seven European archives, annotated with text regions and baselines but without line polygons. Only its page images are used, without labels, for representation distillation.
-\end{itemize}
-The seven cross-generalization datasets cover five scripts, Hebrew, Syriac, Arabic, Greek, and Latin, as well as different line densities and degrees of degradation (Figure~\ref{fig:rq3-collections}):
-\begin{itemize}
-    \item \textbf{Pinkas}~\cite{Barakat2019Pinkas} contains 30 pages of early-modern records of the Frankfurt Jewish community in Hebrew, with bleed-through, stains, faded ink, and overlapping lines. Three training pages without valid line polygons are excluded.
-    \item \textbf{ONB Cod.\ Syr.\ 1}~\cite{AboudIshac2025ONBSyr1} contains 140 folios of a 16th-century Syriac manuscript of the Austrian National Library with one main-text column. Short, partly vertical marginal lines are annotated as separate lines.
-    \item \textbf{RASAM}~\cite{VidalGorene2021RASAM} contains 517 pages from 18 Arabic manuscripts in Maghrebi scripts of the BULAC library, combining both released parts. The images are taken from the library's IIIF server, and the polygons are rescaled where the image resolution differs from the PAGE XML page size.
-    \item \textbf{RASM2018/2019}~\cite{KeinanSchoonbaert2019RASM} contains 120 pages of Arabic scientific manuscripts from the 10th to the 19th century from the British Library, with 2,620 line polygons. Its pages measure up to \(6464\times8984\) pixels, the highest resolution in the pool.
-    \item \textbf{Phil.\ gr.\ 130}~\cite{SindlevAndersen2026PhilGrGT} contains 18 pages of a 14th-century Greek manuscript of the Austrian National Library with 847 line polygons. The images are not part of the release and are taken from the library viewer. With about 47 lines per page, it is the densest collection in the pool.
-    \item \textbf{GRPOLY-DB}~\cite{Gatos2015GRPOLY} is used only in its handwritten part: 46 pages of Greek polytonic documents with 693 line polygons. The pages contain few, widely spaced lines, and the polygons enclose a wide band around the handwriting.
-    \item \textbf{NorHand v3}~\cite{Beyer2023NorHand} contains Norwegian letters and diaries from the 19th and early 20th centuries. The official test set is kept, and a random subset of 30 official training pages, drawn with seed 42, serves as the pool for training and validation pages. The line polygons range from narrow strips to irregular contours.
-\end{itemize}
-
-\begin{figure}[htbp]
-    \centering
-    \begin{subfigure}[t]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_catmus_example.png}
-        \caption{A CATMuS page with text-line polygons.}
-    \end{subfigure}\hfill
-    \begin{subfigure}[t]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{graphics/dataset_cbad_example.png}
-        \caption{A cBAD page with region contours and baselines.}
-    \end{subfigure}
-    \caption{Example pages of the pretraining corpora CATMuS Medieval~\cite{catmus-medieval} and cBAD 2019~\cite{cbad-2019}.}
-    \label{fig:initialization-datasets}
-\end{figure}
 
 \begin{figure}[htbp]
     \centering
@@ -104,7 +69,7 @@ The seven cross-generalization datasets cover five scripts, Hebrew, Syriac, Arab
 \section{Evaluation Metrics}
 \label{metrics}
 
-Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~\cite{diva_tool}: Pixel Intersection over Union (Pixel IU), Line Intersection over Union (Line IU), Detection Rate (DR), Recognition Accuracy (RA), and F-Measure (FM). For U-DIADS-TL, the FEST evaluator is used instead~\cite{Zottin_2025_FEST}.
+Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~\cite{diva_tool} and FEST evaluator for U-DIADS-TL~\cite{Zottin_2025_FEST}:
 
 \begin{enumerate}
     \item \Gls{pixeliu} measures the overlap between predicted and ground-truth foreground pixels:
@@ -112,8 +77,7 @@ Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~
 
     \item \Gls{lineiu} applies the same intersection-over-union principle at the text-line level:
     \[\text{Line IU} = \frac{TP}{TP + FP + FN}.\]
-    Here, $TP$, $FP$, and $FN$ denote correctly detected, extra, and missed lines, respectively. A prediction is correct when both its pixel precision and recall are at least $75\%$.
-
+    
     \item \Gls{dr} measures the proportion of ground-truth lines that are matched:
     \[\text{DR} = \frac{M}{N_1},\]
     where $M$ is the number of matched lines and $N_1$ is the number of ground-truth lines.
@@ -126,253 +90,558 @@ Evaluation uses five metrics computed with the DIVA Line Segmentation Evaluator~
     \[\text{FM} = \frac{2\cdot\text{DR}\cdot\text{RA}}{\text{DR}+\text{RA}}.\]
 \end{enumerate}
 
-\section{Experiment Configurations}
+% Keep the table spacing compact without stretching it to fill each page.
+\begingroup
+\raggedbottom
+\setlength{\intextsep}{6pt}
+\setlength{\floatsep}{6pt}
+\setlength{\textfloatsep}{8pt}
+\setlength{\LTpre}{6pt}
+\setlength{\LTpost}{6pt}
 
-The experiments answer the three \glspl{rq}. \Gls{rq}~1 compares the pipelines, encoders, and initializations on the complete benchmark partitions, \gls{rq}~2 reduces the number of training pages, and \gls{rq}~3 applies the models to collections that were not seen during training.
+\FloatBarrier
 
-\subsection{Training Setup}
-\label{sec:training-setup}\label{sec:training-semantic}\label{sec:training-two-stage}\label{sec:training-mask-rcnn}\label{sec:training-center-line}
+\section{Encoders, Initializations, and Line Reconstruction}
+\label{sec:results-models}
 
-All pipelines are trained on the same instance representation of the \gls{gt}: every line polygon of DIVA-HisDB, CATMuS, and the cross-collection datasets, and every connected component of a U-DIADS-TL mask, becomes an instance mask and a \gls{bbox}. U-DIADS-TL and DIVA-HisDB keep their benchmark partitions, and in \gls{rq}~2 the training pages are selected from the training pool of each DIVA-HisDB manuscript while the validation pages stay the same. For every pipeline, the checkpoint, the thresholds, and the postprocessing parameters are selected on the validation pages, and all runs use the same seed. The transfer experiments of \gls{rq}~3 use the settings of Section~\ref{sec:cross-generalization}.
+Of the stages in Figure~\ref{fig:pipeline-overview}, this section varies the encoder, its initialization, and the line reconstruction. It compares every combination of pipeline, encoder, and initialization on the complete benchmark partitions. On U-DIADS-TL, these are three training pages per manuscript, so that \gls{rq}~1 is a few-shot setting on U-DIADS-TL. On DIVA-HisDB, these are all 20 training pages per manuscript. All results are reported as the line-level \gls{fm} of Section~\ref{metrics}. The center-line model uses ConvNeXt-Tiny with CATMuS initialization only. It takes part in the comparison with the published results and in the line reconstruction, but not in the comparison of encoders and initializations. The best configurations are first compared with the published results. Then, the encoder and the initialization are compared as separate factors, and finally, the predictions of a pipeline are kept fixed and the step that turns them into lines is varied.
 
-Table~\ref{tab:training-settings} lists the training settings of the five networks. The detectors use only photometric augmentation, so that the instance geometry stays aligned with the page. Since RT-DETR is trained with a batch size of one, its BatchNorm layers are frozen. Mask R-CNN uses anchors adapted to long and thin text lines and identical heads for all encoders. Its box and mask predictors are reinitialized for the text line class, while the other heads keep their \gls{coco} initialization. The center-line model is trained on page crops rescaled to a common line thickness and is decoded as described in Section~\ref{sec:rq3-center-line}.
+\subsection{Benchmark Results}
+\label{sec:results-rq11}
 
-\begin{table}[htbp]
-    \centering
-    \caption{Training settings of the networks in \gls{rq}~1 and \gls{rq}~2.}
-    \label{tab:training-settings}\label{tab:rq3-center-line-settings}
-    \scriptsize
-    \setlength{\tabcolsep}{3pt}
-    \begin{tabular}{@{}llllll@{}}
-        \toprule
-        & U-Net & Center-line & RT-DETR & BBox U-Net & Mask R-CNN \\
-        \midrule
-        Encoder & 3 families & ConvNeXt-Tiny & 3 families & ResNet-34 & 3 families \\
-        Input & \(448^2\) crops & \(512^2\) crops\(^{a}\) & page, \(1152^2\) & \(1024\times256\) crops & page, \(704^2\)/\(1024^2\)\(^{b}\) \\
-        Length & \(\le\)100 epochs\(^{c}\) & 1,500/800 steps\(^{b}\) & 100 epochs & 50 epochs & 30/200 epochs\(^{b}\) \\
-        Batch size & 4 & 4 & 1 (\(\times\)2 accum.) & 4 & 1 \\
-        Learning rate\(^{d}\) & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(10^{-3}\) / \(10^{-4}\) \\
-        Schedule & cosine & one-cycle & constant & constant & cosine \\
-        Loss & BCE + Dice & BCE + Dice, \(L_1\) & RT-DETR loss & BCE / Tversky / SV & Mask R-CNN loss \\
-        Augmentation & flip, rotation, B/C & B/C, blur & color jitter & B/C, affine, noise & color jitter \\
-        Checkpoint & val.\ pixel \gls{iou} & final & val.\ box mAP & val.\ Dice & val.\ split \\
-        \bottomrule
-    \end{tabular}
-    \par\smallskip
-\end{table}
-
-The BBox U-Net is trained separately from the detectors on \gls{gt} line crops, so that the same model can segment the boxes of both detectors. Three losses are compared for it: \gls{bce}, the Tversky loss~\cite{salehi2017tversky}, which weights missed foreground pixels more strongly than false positives, and the connectivity-preserving SuperVoxel loss~\cite{grim2025supervoxel}, which penalizes split and merged components. In \gls{rq}~1, the detector comparisons use a fixed BBox U-Net, trained with the Tversky loss on U-DIADS-TL and with BCE on DIVA-HisDB, and the loss study is reported in Appendix~\ref{app:rq1-extra}.
-
-\label{sec:training-pretraining}
-Two initializations of Section~\ref{sec:initializations} require an additional training stage before few-shot fine-tuning: the distillation on cBAD 2019 (Table~\ref{tab:distillation}) and the supervised pretraining on CATMuS (Table~\ref{tab:catmus-pretraining}). Because of limited computational resources, the distillation schedules are shorter than recommended by LightlyTrain~\cite{lightlytrain-distillation}.
+As shown in Table~\ref{tab:sota}, the best configurations of this thesis set a new \gls{sota} on both benchmarks. Table~\ref{tab:sota} also lists the number of annotated training pages per manuscript and the annotated line data that each method uses in addition to the benchmark. On U-DIADS-TL, Mask R-CNN with CATMuS-initialized ConvNeXt-Tiny reaches 92.20 \(\pm\) 0.09\% over three training seeds, compared with 83.00\% for PERO, the best result of the FEST competition~\cite{Zottin_2025_FEST}. The U-Net with projection cuts also exceeds PERO with 87.38\%, and with 87.65 \(\pm\) 0.35\% over three seeds. On DIVA-HisDB, Mask R-CNN reaches 99.21\%, and seven of its seventeen configurations exceed the 97.43\% of Mask R-CNN+~\cite{signals3030032}. The results of every encoder and initialization are given in Table~\ref{tab:rq1-mean}, and the results per subset and for all five metrics in Appendix~\ref{app:rq1-subsets}.
 
 \begin{table}[htbp]
     \centering
-    \caption{Distillation on cBAD 2019.}
-    \label{tab:distillation}
     \footnotesize
-    \setlength{\tabcolsep}{4pt}
-    \begin{tabular}{@{}ll@{}}
+    \setlength{\tabcolsep}{3pt}
+    \caption{Comparison with published results (line \gls{fm}). Pages: annotated training pages per manuscript. Additional data: annotated line data besides the benchmark. Mask R-CNN and Mask R-CNN+~\cite{signals3030032} use the private DIVA-HisDB test pages without glosses. CATMuS pretraining excludes the DIVA-HisDB pages. Best result in bold.}
+    \label{tab:sota}
+    \begin{tabular}{@{}llcccc@{}}
         \toprule
-        Setting & Value \\
+        & & \multicolumn{2}{c}{U-DIADS-TL} & \multicolumn{2}{c}{DIVA-HisDB} \\
+        \cmidrule(lr){3-4}\cmidrule(l){5-6}
+        Method & Additional data & Pages & \gls{fm} & Pages & \gls{fm} \\
         \midrule
-        Data & 3,021 unlabeled cBAD 2019 pages \\
-        Teacher & DINOv3 ViT-B/16 \\
-        Students & ConvNeXt-Tiny, PVTv2-B2, ViT-Small (random initialization) \\
-        Length & 1,100 epochs (ConvNeXt-Tiny), 300 epochs (PVTv2-B2, ViT-Small) \\
-        Input / batch size & \(224^2\) random crops / 128 (gradient accumulation) \\
-        Optimizer & AdamW, peak learning rate \(1.44\cdot10^{-4}\), weight decay 0.04\(^{a}\) \\
-        Schedule & cosine with 10 warm-up epochs \\
-        Augmentation & random resized crops, flip, color jitter, grayscale, blur \\
-        Checkpoint & last epoch \\
+        \multicolumn{6}{@{}l}{\emph{Published}} \\
+        PERO (FEST 2025)~\cite{Zottin_2025_FEST} & PERO layout data & 3 & 83.00 & -- & -- \\
+        VAI-OCR (FEST 2025)~\cite{Zottin_2025_FEST} & DIVA-HisDB & 3 & 74.80 & -- & -- \\
+        Conn.-Aware U-Net++~\cite{sterzinger2025fewshot} & none & 3 & 61.40 & -- & -- \\
+        APAU-Net~\cite{Beghoura2026-dp} & none & 3 & 63.35 & 20 & 54.94 \\
+        Mask R-CNN~\cite{signals3030032} & none & -- & -- & 20 & 75.74 \\
+        Mask R-CNN+~\cite{signals3030032} & none & -- & -- & 20 & 97.43 \\
+        \midrule
+        \multicolumn{6}{@{}l}{\emph{This thesis, without additional annotated data}} \\
+        Mask R-CNN (ConvNeXt-Tiny, ImageNet) & none & 3 & 91.87 & 20 & 98.43 \\
+        Mask R-CNN (ConvNeXt-Tiny, DINOv3) & none & 3 & 91.64 & 20 & 99.21 \\
+        U-Net (ConvNeXt-Tiny, ImageNet) & none & 3 & 87.38 & 20 & 95.03 \\
+        \midrule
+        \multicolumn{6}{@{}l}{\emph{This thesis, CATMuS pretraining}} \\
+        Mask R-CNN (ConvNeXt-Tiny) & CATMuS & 3 & \textbf{92.20} & 20 & 98.96 \\
+        Mask R-CNN (ConvNeXt-Tiny) & CATMuS & -- & -- & 1 & 97.73 \\
+        Mask R-CNN + BBox U-Net + \gls{dp} seam & CATMuS & -- & -- & 1 & 99.18 \\
+        Mask R-CNN + BBox U-Net + \gls{dp} seam & CATMuS & -- & -- & 20 & \textbf{99.43} \\
+        Center-line model & CATMuS & -- & -- & 3 & 98.44 \\
         \bottomrule
     \end{tabular}
-    \par\smallskip
-    \parbox{0.86\linewidth}{\scriptsize \(^{a}\)Excluding bias, normalization, and token parameters.}
 \end{table}
+% TODO: DP seam rows filled with clean seam_e results (11-19). tab:matched-pixels seam/Mask R-CNN rows still old CATMuS (seam_e has no matched-pixel metrics).
 
 \begin{table}[htbp]
     \centering
-    \caption{Pretraining on CATMuS Medieval.}
-    \label{tab:catmus-pretraining}
-    \scriptsize
-    \setlength{\tabcolsep}{3pt}
-    \begin{tabular}{@{}lllll@{}}
+    \footnotesize
+    \setlength{\tabcolsep}{3.5pt}
+    \caption{Line \gls{fm} of the three pipelines for every encoder and initialization, averaged over the three manuscripts of each benchmark (unweighted mean of the per-manuscript \gls{fm} in Appendix~\ref{app:rq1-subsets}). DINOv3 (LVD-1689M) provides no PVTv2-B2 weights, and the U-Net with projection cuts is not trained with the cBAD-distilled and CATMuS initializations.}
+    \label{tab:rq1-mean}
+    \begin{tabular}{@{}llcccccc@{}}
         \toprule
-        & Mask R-CNN & RT-DETR & BBox U-Net & Center-line \\
+        & & \multicolumn{3}{c}{U-DIADS-TL} & \multicolumn{3}{c}{DIVA-HisDB} \\
+        \cmidrule(lr){3-5}\cmidrule(l){6-8}
+        Encoder & Initialization & RT-DETR & \shortstack{Mask\\R-CNN} & U-Net & RT-DETR & \shortstack{Mask\\R-CNN} & U-Net \\
         \midrule
-        Data & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,335 / 191 pages\(^{a}\) & 1,334 pages\(^{a}\) \\
-        Supervision & line masks & line boxes & line masks in boxes & center lines, ends, distances \\
-        Length & 30 epochs & 30 epochs & 10 epochs & 12,000 steps \\
-        Input & \(704^2\) & \(1152^2\) & \(1024\times256\) crops & \(512^2\) crops\(^{b}\) \\
-        Batch size & 1 & 1 (\(\times\)2 accum.) & 8 & 4 \\
-        Learning rate\(^{c}\) & \(10^{-3}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
-        Schedule & cosine & constant & constant & one-cycle \\
-        Loss & Mask R-CNN loss & RT-DETR loss & BCE, then Tversky & BCE + Dice, \(L_1\) \\
-        Augmentation & color jitter & color jitter & B/C, affine, noise & B/C, blur \\
-        Checkpoint & val.\ mask AP@0.5 & val.\ box AP@[0.5:0.95] & val.\ Dice & final \\
+        ConvNeXt-Tiny & Random & 33.39 & 78.00 & 79.89 & 91.18 & 94.51 & 91.64 \\
+                        & ImageNet & 83.86 & 91.87 & \textbf{87.38} & 89.67 & 98.43 & 95.03 \\
+                        & DINOv3 (LVD-1689M) & 42.23 & 91.64 & 85.81 & 90.43 & \textbf{99.21} & \textbf{95.76} \\
+                        & DINOv3 (cBAD) & 69.10 & 90.22 & -- & 88.98 & 98.87 & -- \\
+                        & CATMuS & 89.90 & \textbf{92.03} & -- & 91.41 & 98.58 & -- \\
+        \midrule
+        PVTv2-B2 & Random & 62.15 & 88.25 & 79.16 & 88.47 & 96.97 & 89.07 \\
+                        & ImageNet & 80.55 & 91.37 & 87.00 & 91.22 & 98.95 & 91.82 \\
+                        & DINOv3 (cBAD) & 69.29 & 91.01 & -- & 91.83 & 98.54 & -- \\
+                        & CATMuS & \textbf{91.71} & 91.77 & -- & 90.35 & 99.14 & -- \\
+        \midrule
+        ViT-Small & Random & 44.79 & 86.64 & 82.97 & \textbf{91.96} & 90.77 & 89.17 \\
+                        & ImageNet & 70.17 & 90.08 & 84.04 & 89.58 & 94.62 & 92.73 \\
+                        & DINOv3 (LVD-1689M) & 78.95 & 88.02 & 86.38 & 90.08 & 88.20 & 90.04 \\
+                        & DINOv3 (cBAD) & 73.09 & 89.54 & -- & 89.49 & 95.41 & -- \\
+                        & CATMuS & 90.93 & 91.18 & -- & 91.58 & 97.43 & -- \\
         \bottomrule
     \end{tabular}
-    \par\smallskip
+\end{table}
+% TODO: Mask R-CNN CATMuS rows still old CATMuS. RT-DETR rows = confidence grid from 0.001 (11-19).
+
+\label{sec:results-rq12}\label{sec:results-rq13}
+
+
+\FloatBarrier
+
+\subsection{Encoders and Initializations}
+\label{sec:results-rq1-summary}
+
+Table~\ref{tab:rq1-paired} compares results that differ in one factor only, that is, results with the same pipeline, benchmark, and other factor. The encoder family has no consistent effect. Compared with ConvNeXt-Tiny, PVTv2-B2 is better in 10 of 20 pairs and ViT-Small in 10 of 26 pairs, with median differences of $-0.03$ and $-0.76$ percentage points. The initialization has a larger effect. CATMuS is better than ImageNet in 11 of 12 pairs, with a median difference of 1.42 percentage points, and random weights are worse than ImageNet in 16 of 18 pairs. The two DINOv3 variants are better than ImageNet in only 6 and 4 of 12 pairs. The largest effect occurs for RT-DETR + BBox U-Net, where CATMuS improves the U-DIADS-TL result by 6.04--20.76 percentage points over ImageNet with the same encoder. The encoder size has a small effect as well. As shown in Appendix~\ref{app:rq1-size}, larger encoders improve the U-DIADS-TL result of Mask R-CNN and the U-Net with projection cuts by only 1.5 and 1.6 percentage points. The pooled means per factor are given in Appendix~\ref{app:rq1-subsets}.
+
+This effect differs between the pipelines. Trained from random weights, RT-DETR + BBox U-Net reaches only 33.39\% on U-DIADS-TL, while all three of its encoders reach 89.90--91.71\% after CATMuS pretraining. Mask R-CNN and the U-Net with projection cuts depend less on the starting weights. However, random weights also give their lowest U-DIADS-TL results, with 78.00\% and 79.89\% for ConvNeXt-Tiny. From random weights, RT-DETR + BBox U-Net segments most lines only in parts or not at all. From ImageNet weights, it misses individual lines, and from CATMuS weights, it segments almost all of them.
+
+\begin{table}[htbp]
+    \centering
+    \footnotesize
+    \setlength{\tabcolsep}{2.5pt}
+    \caption{Paired differences of the mean line \gls{fm} (percentage points) to a reference encoder (ConvNeXt-Tiny) or a reference initialization (ImageNet). Each pair has the same pipeline, benchmark, and other factor. Wins: pairs with a higher \gls{fm} than the reference. The last three columns give the median difference per pipeline.}
+    \label{tab:rq1-paired}\label{tab:rq1-grouped}\label{tab:rq1-factor-ranges}
+    \begin{tabular}{@{}llrrrrccc@{}}
+        \toprule
+        & & \multicolumn{4}{c}{All pipelines} & \multicolumn{3}{c}{Median per pipeline} \\
+        \cmidrule(lr){3-6}\cmidrule(l){7-9}
+        Reference & Compared & Pairs & Mean & Median & Wins & RT-DETR & Mask R-CNN & U-Net \\
+        \midrule
+        ConvNeXt-Tiny & PVTv2-B2 & 20 & $+1.73$ & $-0.03$ & 10 & $+0.87$ & $+0.54$ & $-1.65$ \\
+                        & ViT-Small & 26 & $+0.34$ & $-0.76$ & 10 & $+0.64$ & $-2.63$ & $-2.38$ \\
+        \midrule
+        ImageNet & Random & 18 & $-8.30$ & $-3.50$ & 2 & $-10.57$ & $-3.65$ & $-3.48$ \\
+                        & DINOv3 (LVD) & 12 & $-3.39$ & $+0.13$ & 6 & $+0.63$ & $-1.15$ & $-0.42$ \\
+                        & DINOv3 (cBAD) & 12 & $-2.08$ & $-0.38$ & 4 & $-0.39$ & $-0.38$ & -- \\
+                        & CATMuS & 12 & $+3.80$ & $+1.42$ & 11 & $+4.02$ & $+0.29$ & -- \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 
-\subsection{Page Selection Setup}
+\FloatBarrier
+\subsection{Line Reconstruction}
+\label{sec:results-reconstruction}
+\label{sec:results-components}
+\label{sec:results-integration}\label{app:boundary-reconstruction}\label{sec:results-dp-seam}
+As could be seen from Table~\ref{tab:second-stage}, the second stage has the highest effect when the \gls{gt} is pixel-based. With identical Mask R-CNN detections, the BBox U-Net raises the U-DIADS-TL \gls{fm} from 16.61\% with the coarse \gls{roi} masks to 90.82\%. On DIVA-HisDB, only the ink inside a polygon is evaluated, and the \gls{roi} masks reach 98.96\%. Here, the \gls{dp} seam raises the result to 99.43\%. However, the seam region has to match the \gls{gt} format. On U-DIADS-TL, its filled region lowers the \gls{fm} to 67.85\%, and only its intersection with the predicted ink reaches 90.66\%, which is close to the 90.82\% of the BBox U-Net.
+
+\begin{table}[htbp]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \caption{Second stages and \gls{dp} seam for the same Mask R-CNN detections (line \gls{fm}).}
+    \label{tab:second-stage}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llcccccccc@{}}
+        \toprule
+        & & \multicolumn{4}{c}{DIVA-HisDB} & \multicolumn{4}{c}{U-DIADS-TL} \\
+        \cmidrule(lr){3-6}\cmidrule(l){7-10}
+        Second stage & Output & CB55 & CS18 & CS863 & Mean & Lat.\,14396 & Lat.\,2 & Syr.\,341 & Mean \\
+        \midrule
+        \glsentryshort{roi} mask (28$\times$28) & mask & 99.20 & 98.71 & 98.97 & 98.96 & 33.43 & 12.88 & 3.52 & 16.61 \\
+        BBox U-Net & mask & 99.19 & 98.11 & 99.17 & 98.82 & \textbf{95.47} & \textbf{93.14} & 83.84 & \textbf{90.82} \\
+        \midrule
+        \multicolumn{10}{@{}l}{\emph{Postprocessing of the BBox U-Net output}} \\
+        + \gls{dp} seam & region & \textbf{99.36} & \textbf{99.08} & \textbf{99.84} & \textbf{99.43} & 90.18 & 78.61 & 34.77 & 67.85 \\
+        + \gls{dp} seam $\cap$ ink & mask & -- & -- & -- & -- & \textbf{95.47} & 91.46 & \textbf{85.04} & 90.66 \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+\label{sec:results-center-line-udiads}
+Additionally, as shown in Table~\ref{tab:udiads-center-line}, the center-line model can provide the boxes for the BBox U-Net on U-DIADS-TL. As a detector, it reaches 87.06\%. This is close to the U-Net with projection cuts and better on Syr341, but below Mask R-CNN with the same BBox U-Net. Splitting the U-Net mask along its center lines gives only 65.97\%.
+
+\begin{table}[htbp]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \caption{Center-line model and reference pipelines on U-DIADS-TL.}
+    \label{tab:udiads-center-line}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llccccc@{}}
+        \toprule
+        Subset & Method & Pixel IU & Line IU & DR & RA & FM \\
+        \midrule
+        \multirow{4}{*}{Latin14396} & Mask R-CNN + BBox U-Net & \textbf{87.44} & \textbf{97.43} & \textbf{95.88} & 95.11 & 95.47 \\
+                                    & U-Net with projection cuts & 85.09 & 97.04 & 95.85 & 95.74 & \textbf{95.79} \\
+        \cmidrule(l){2-7}
+                                    & U-Net cut by center lines & 82.31 & 85.06 & 82.33 & 56.61 & 67.01 \\
+                                    & Center-line model + BBox U-Net & 85.26 & 95.71 & 90.74 & \textbf{96.17} & 93.34 \\
+        \midrule
+        \multirow{4}{*}{Latin2} & Mask R-CNN + BBox U-Net & \textbf{85.71} & \textbf{96.94} & \textbf{92.56} & \textbf{93.74} & \textbf{93.14} \\
+                                & U-Net with projection cuts & 82.29 & 96.82 & 87.76 & 89.15 & 88.39 \\
+        \cmidrule(l){2-7}
+                                & U-Net cut by center lines & 75.70 & 79.51 & 72.84 & 51.27 & 59.84 \\
+                                & Center-line model + BBox U-Net & 76.70 & 89.24 & 82.48 & 91.75 & 86.46 \\
+        \midrule
+        \multirow{4}{*}{Syr341} & Mask R-CNN + BBox U-Net & \textbf{79.10} & \textbf{93.42} & \textbf{82.46} & \textbf{85.27} & \textbf{83.84} \\
+                                & U-Net with projection cuts & 72.04 & 88.76 & 77.06 & 78.94 & 77.95 \\
+        \cmidrule(l){2-7}
+                                & U-Net cut by center lines & 77.45 & 91.02 & 78.65 & 64.84 & 71.06 \\
+                                & Center-line model + BBox U-Net & 77.88 & 93.34 & 80.39 & 82.41 & 81.38 \\
+        \midrule
+        \multirow{4}{*}{Mean} & Mask R-CNN + BBox U-Net & \textbf{84.08} & \textbf{95.93} & \textbf{90.30} & \textbf{91.37} & \textbf{90.82} \\
+                              & U-Net with projection cuts & 79.81 & 94.21 & 86.89 & 87.94 & 87.38 \\
+        \cmidrule(l){2-7}
+                              & U-Net cut by center lines & 78.49 & 85.20 & 77.94 & 57.57 & 65.97 \\
+                              & Center-line model + BBox U-Net & 79.95 & 92.76 & 84.54 & 90.11 & 87.06 \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+\label{sec:disc-reconstruction}\label{sec:disc-roi-masks}\label{sec:disc-further-failures}
+
+On U-DIADS-TL, Mask R-CNN finds the lines, but its \gls{roi} masks mostly stay below the \gls{iou} threshold of 0.75 of the FEST evaluation. As shown in Figure~\ref{fig:udiads-roi-fm}, 79\% of the \gls{gt} lines overlap their best \gls{roi} mask with an \gls{iou} between 0.60 and 0.75, just below the matching threshold of 0.75, while 90\% of the lines segmented by the BBox U-Net in the same boxes exceed it. Figure~\ref{fig:udiads-roi-overlay} shows that the \gls{roi} masks lie on the correct lines but extend beyond the ink.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{graphics/udiads_roi_iou.pdf}
+    \caption{Best \glsentryshort{iou} of each U-DIADS-TL test line (5,268 lines) with a predicted instance, for the \glsentryshort{roi} masks and the BBox U-Net masks of the same Mask R-CNN detections. Dashed: FEST threshold of 0.75.}
+    \label{fig:udiads-roi-iou}\label{fig:udiads-roi-fm}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/udiads_roi_Latin2_230_roi_err.png}\caption{\glsentryshort{roi} masks, \gls{fm} 10.5\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/udiads_roi_Latin2_230_crop_err.png}\caption{BBox U-Net masks, \gls{fm} 81.6\%.}\end{subfigure}
+    \caption{\glsentryshort{roi} masks and BBox U-Net masks of the same Mask R-CNN detections on U-DIADS-TL Latin2 test page 230. Green marks covered ink, orange predicted pixels that are not ink, and blue missed ink. Generated from U-DIADS-TL~\cite{Zottin_2025_FEST}.}
+    \label{fig:udiads-roi-overlay}
+\end{figure}
+
+On DIVA-HisDB, the masks mainly change how much of a line's ink is covered, while the line \gls{fm} of the same detections changes by less than one percentage point. As shown in Table~\ref{tab:matched-pixels}, Mask R-CNN reaches a line \gls{fm} of 98.58\%, but its \gls{roi} masks cover only 89.92\% of the ink of the matched lines because the coarse \gls{roi} masks omit parts of the ascenders and descenders that extend above and below the line. With the BBox U-Net and the \gls{dp} seam, the same detections cover 98.63\% of the ink, and the center-line model covers 97.28\%, as the ink components that touch its center line are assigned to the line.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Line \gls{fm} and pixel coverage of the matched lines on the DIVA-HisDB test pages (mean over the 30 pages).}
+    \label{tab:matched-pixels}
+    \begin{tabular}{@{}lcccc@{}}
+        \toprule
+        & & \multicolumn{3}{c}{Matched lines} \\
+        \cmidrule(l){3-5}
+        Pipeline & Line \gls{fm} & \glsentryshort{pixeliu} & Recall & Precision \\
+        \midrule
+        RT-DETR + BBox U-Net & 93.34 & 97.64 & 97.85 & \textbf{99.78} \\
+        Mask R-CNN & 98.58 & 89.54 & 89.92 & 99.52 \\
+        Mask R-CNN + BBox U-Net + \gls{dp} seam & \textbf{99.55} & \textbf{98.22} & \textbf{98.63} & 99.57 \\
+        U-Net & 95.76 & 94.46 & 95.80 & 98.52 \\
+        Center-line model & 98.05 & 94.85 & 97.28 & 97.46 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\FloatBarrier
+
+In answer to \gls{rq}~1, the encoder architecture has the smallest effect, since the transformer-based encoders are better than ConvNeXt-Tiny in only 10 of 20 and 10 of 26 paired comparisons in Table~\ref{tab:rq1-paired}. The initialization has a larger effect, as CATMuS is better than ImageNet in 11 of 12 paired comparisons, and the line reconstruction has the largest effect, as it raises the U-DIADS-TL result of the same Mask R-CNN detections from 16.61\% to 90.82\%. The CATMuS-pretrained Mask R-CNN with a mask per detected line reaches the \gls{sota} on both benchmarks. Of the two paradigms, instance segmentation gives the best results on both benchmarks, while the U-Net with projection cuts exceeds the published results only on U-DIADS-TL.
+
+\FloatBarrier
+
+\section{Effect of the Number of Training Pages}
+\label{sec:results-rq2}\label{sec:results-rq2-unet}\label{sec:results-rq2-twostage}\label{sec:results-rq2-maskrcnn}\label{sec:results-rq2-summary}
 \label{sec:page-selection-setup}
 
-The page selection of \gls{rq}~2 is applied to DIVA-HisDB, since only its manuscripts provide a pool of twenty training pages, whereas U-DIADS-TL provides three. The strategies of Section~\ref{sec:shot-sampling} choose \(k\in\{1,3,5,10,15\}\) pages from the twenty training pages of each DIVA-HisDB manuscript. For the embedding-based strategies, each page is resized to \(720\times720\) pixels and ImageNet-normalized, and each feature dimension is standardized across the candidate pool.
-
+Of the stages in Figure~\ref{fig:pipeline-overview}, this section keeps the pipelines fixed and varies the number and the selection of the training pages. The page selection of \gls{rq}~2 is applied to DIVA-HisDB, since only its manuscripts provide a pool of twenty training pages, while U-DIADS-TL provides three. Additionally, DIVA-HisDB is the dataset that the related work in Chapter~\ref{lit_rec} uses most often, so that the results can be compared with published methods. The strategies of Section~\ref{sec:shot-sampling} choose \(k\in\{1,3,5,10,15\}\) pages from the twenty training pages of each manuscript. For the embedding-based strategies, each page is resized to \(720\times720\) pixels and ImageNet-normalized, and each feature dimension is standardized across the candidate pool.
+The selected pages are shown in Figure~\ref{fig:shot-sampling}.
 \begin{figure}[htbp]
     \centering
     \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/shot_sampling_pca.pdf}\caption{\Gls{pca} projections.}\label{fig:shot-sampling-pca}\end{subfigure}\hfill
     \begin{subfigure}[t]{0.49\linewidth}\centering\includegraphics[width=\linewidth]{graphics/shot_sampling_ica.pdf}\caption{\Gls{ica} projections.}\label{fig:shot-sampling-ica}\end{subfigure}
-    \caption[Page projections for five-shot page selection]{Two-dimensional projections of the twenty training pages per DIVA-HisDB manuscript (rows: CB55, CS18, CS863) with five-shot selections: max--min (red circles), farthest from centroid (green squares), centroid (black crosses). Generated from DIVA-HisDB~\cite{diva_hisdb}.}
+    \caption[Page projections for five-shot page selection]{Two-dimensional projections of the twenty training pages per DIVA-HisDB manuscript (rows: CB55, CS18, CS863) with five-shot selections: max--min (red circles), farthest from the centroid (green squares), centroid (black crosses). Generated from DIVA-HisDB~\cite{diva_hisdb}.}
     \label{fig:shot-sampling}
 \end{figure}
 
-\subsection{Cross-Collection Transfer}
-\label{sec:cross-generalization}
+\label{sec:results-rq2-results}
 
-\Gls{rq}~3 examines whether a model trained on a few pages of one or more collections transfers to a collection that it has never seen during training. For this purpose, it uses the seven cross-collection datasets of Section~\ref{sec:datasets}.
+\label{sec:results-rq2-center-line}
+As shown in Table~\ref{tab:rq2-pipelines-catmus}, three training pages per manuscript reach the \gls{sota} on DIVA-HisDB when the model is pretrained on annotated lines. RT-DETR + BBox U-Net stays below Mask R-CNN for every number of pages, although the \gls{dp} seam raises its one-page result from 74.47\% to 95.52\%. Over three seeds, the CATMuS-pretrained Mask R-CNN reaches 95.39 \(\pm\) 3.55\% with one page and 98.67 \(\pm\) 0.29\% with three, compared with the 97.43\% of Mask R-CNN+ trained on all pages~\cite{signals3030032}. With one page, the result depends on the selected page and ranges from 91.30\% to 97.73\%. The CATMuS-pretrained center-line model reaches 89.31 \(\pm\) 5.60\% with one page and 97.85--98.76\% from three pages on. The results of all selection strategies are listed in Appendix~\ref{app:rq2-selection}. As shown in Table~\ref{tab:rq2-fm-by-selection}, the selection of the pages has a much smaller effect. No selection strategy is the best for every number of pages, and with one and three pages, the standard deviations are larger than the differences between the strategies. The best-ranked strategy, \gls{pca} max--min, exceeds random selection by 1.70 percentage points on average, but this difference is not significant (paired Wilcoxon signed-rank test, \(p=0.135\)). With one page, the selected page has a larger effect than the mean over all numbers of pages suggests. As shown in Table~\ref{tab:rq2-fm-by-initialization}, CATMuS gives the highest mean over all pipelines and selection strategies for every number of pages, with 84.53\% for one page compared with 39.23--56.23\% for the other initializations. Figure~\ref{fig:rq2-pretraining-shots} shows that a single page is sufficient with pretraining on annotated lines, while without it, all initializations need ten pages.
 
-\label{sec:data-partitions}
-
-Five of the seven cross-collection datasets, ONB Cod.\ Syr.\ 1, RASAM, RASM2018/2019, Phil.\ gr.\ 130, and GRPOLY-DB, are released without an official partition. To give all seven cross-collection datasets the same conditions, each of them is partitioned once with three pages are drawn for training, 10\% of the pages for validation, and the remaining pages form the test set. Pinkas and NorHand v3 keep their official test sets and hold their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages. 
-
-All experiments use the center-line model (Section~\ref{sec:rq3-center-line}) and Mask R-CNN (Section~\ref{sec:mask-rcnn-method}). Table~\ref{tab:rq3-training-settings} lists the model, augmentation, and optimization settings. The configuration is selected by the mean source-validation \gls{fm} among cumulative modifications of a baseline on nine source--target pairs, so that no target test page influences the choice. Score and mask thresholds are selected by validation \gls{fm}, and \gls{pixeliu} decides between settings with the same \gls{fm}.
+% The low Mask R-CNN result comes from CB55 alone. With CB55 page 0008v as the only training page, Mask R-CNN reaches 79.66\% on CB55, compared with 95.85\% and 95.71\% with pages 0011v and 0072v, while CS18 and CS863 stay above 95\% for all seeds. Page 0008v has almost no commentary next to the main text, while pages 0011v and 0072v contain dense commentary in the margins. With one page, the training page therefore has to contain the layout elements of the test pages.
+%
 
 \begin{table}[htbp]
     \centering
-    \caption{Settings of the transfer experiments.}
-    \label{tab:rq3-training-settings}
-    \footnotesize
+    \small
+    \caption{Pipelines on DIVA-HisDB with CATMuS initialization (random selection, mean \gls{fm}, seed 42). All pipelines use the same page sets.}
+    \label{tab:rq2-pipelines-catmus}\label{tab:rq2-crop-dp}
     \setlength{\tabcolsep}{4pt}
-    \begin{tabular}{@{}lll@{}}
+    \begin{tabular}{@{}lcccccc@{}}
         \toprule
-        & Mask R-CNN & Center-line \\
+        Pipeline & \multicolumn{6}{c}{Training pages \(k\)} \\
+        \cmidrule(l){2-7}
+         & 1 & 3 & 5 & 10 & 15 & 20 \\
         \midrule
-        Initialization & ConvNeXt-Tiny, CATMuS & ConvNeXt-Tiny, CATMuS or cBAD \\
-        Input & \(1152^2\) canvas & \(512^2\) crops (Table~\ref{tab:training-settings}) \\
-        Length & 50 epochs & 3,000 steps \\
-        Batch size & 1 & 4 \\
-        Learning rate\(^{a}\) & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
-        Schedule & cosine & one-cycle \\
-        Augmentation & scale jitter\(^{b}\), photometric & B/C, blur \\
-        Anchors & 32--512 pixels; ratios 0.05--1.0 & -- \\
-        Thresholds & score \(\{0.3,0.5,0.7,0.9\}\), mask \(\{0.3,0.5\}\)\(^{c}\) & -- \\
+        RT-DETR + BBox U-Net & 70.51 & 88.99 & 94.14 & 89.10 & 95.66 & 91.41 \\
+        RT-DETR + BBox U-Net + \gls{dp} seam & 95.52 & 93.77 & 95.26 & 90.93 & 95.73 & 94.09 \\
+        Mask R-CNN & 97.73 & 98.91 & 98.53 & 98.97 & 99.26 & 98.96 \\
+        Mask R-CNN + BBox U-Net + \gls{dp} seam & \textbf{99.18} & \textbf{99.60} & \textbf{99.31} & \textbf{99.55} & \textbf{99.55} & \textbf{99.43} \\
+        Center-line model & 93.65 & 98.44 & 98.59 & 98.25 & 99.01 & 98.30 \\
         \bottomrule
     \end{tabular}
-    \par\smallskip
-    \end{table}
+\end{table}
+% TODO: k=1 of both RT-DETR rows stays old (70.51 / 95.52, author decision 11-19: CS18_k1_eec0092d has no best_model weights). RT-DETR k=3-20 and its DP seam row k=3-20 = clean CATMuS, grid 0.001 (requeue B, Colab notebook 2, 11-19). App. B RT-DETR ImageNet/DINOv3/cBAD rows -> requeue C, then rerun fill_rq2.py and recompute PCA max-min vs random (1.70, p=0.135, Wilcoxon over App. B cells). Still old CATMuS: App. B Mask R-CNN CATMuS rows of the non-random strategies, App. C Friedman tests, 74.47 (App. B Random CATMuS k=1).
 
-At inference, masks are assigned in descending confidence order and restored to page resolution. The largest contour of each mask defines its text line polygon, and points near its lowest point define the baseline, using the tolerance in Table~\ref{tab:rq3-training-settings}. Predictions are not clipped to a main-text region, because the collections do not provide one.
 
-\label{sec:wiseft}
+\begin{table}[htbp]
+    \centering
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \caption{Mean DIVA-HisDB \gls{fm} by initialization.}
+    \label{tab:rq2-fm-by-initialization}
+    \begin{tabular}{@{}lccccc@{}}
+        \toprule
+        Initialization & \multicolumn{5}{c}{Training pages \(k\)} \\
+        \cmidrule(l){2-6}
+         & 1 & 3 & 5 & 10 & 15 \\
+        \midrule
+        ImageNet & 40.32 \(\pm\) 22.50 & 81.66 \(\pm\) 6.98 & 88.69 \(\pm\) 3.88 & 91.75 \(\pm\) 7.35 & 93.60 \(\pm\) 4.17 \\
+        DINOv3 (LVD-1689M) & 39.23 \(\pm\) 29.01 & 65.43 \(\pm\) 25.56 & 84.61 \(\pm\) 8.83 & 89.28 \(\pm\) 9.32 & 92.79 \(\pm\) 7.42 \\
+        DINOv3 (cBAD) & 56.23 \(\pm\) 14.08 & 84.32 \(\pm\) 6.16 & 89.46 \(\pm\) 5.41 & 91.13 \(\pm\) 6.72 & 93.16 \(\pm\) 5.13 \\
+        CATMuS & \textbf{84.53} \(\pm\) 10.00 & \textbf{92.66} \(\pm\) 5.77 & \textbf{95.29} \(\pm\) 3.33 & \textbf{94.37} \(\pm\) 5.40 & \textbf{95.59} \(\pm\) 4.03 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
-Fine-tuning on a few annotated pages adapts a pretrained model to these pages but can reduce the robustness that it gained during pretraining. Therefore, it is checked whether \gls{wiseft}~\cite{wortsman2022wiseft} improves the transfer. It requires no additional training: the weights of the pretrained and the fine-tuned model are linearly interpolated,
-\begin{equation}
-    \theta = (1-\alpha)\,\theta_{\mathrm{pre}} + \alpha\,\theta_{\mathrm{ft}},
-    \label{eq:wiseft}
-\end{equation}
-where \(\theta_{\mathrm{pre}}\) and \(\theta_{\mathrm{ft}}\) denote the pretrained and fine-tuned weights, and \(\alpha\) is the interpolation weight. A weight of \(\alpha=0\) gives the pretrained model and \(\alpha=1\) the fine-tuned model. The CATMuS-pretrained center-line model uses \(\alpha=0.5\), which was fixed before the evaluation, whereas Mask R-CNN and the cBAD-encoder center-line model use the fine-tuned weights. To measure the effect of \(\alpha\), both CATMuS-pretrained models are additionally evaluated in single-collection transfer with \(\alpha\in\{0,0.25,0.5,0.75,1\}\).
 
-Transfer is measured in four settings:
-\begin{itemize}
-    \item \textbf{Zero-shot.} The CATMuS-pretrained model is applied without fine-tuning, using the fixed thresholds in Table~\ref{tab:rq3-training-settings}.
-    \item \textbf{Single-collection transfer.} One model is trained on the three training pages of each collection, its thresholds are selected on the validation pages of that collection, and it is applied unchanged to all seven test sets. The diagonal of the resulting \(7\times7\) matrix is the in-domain result, and the off-diagonal cells measure zero-shot transfer.
-    \item \textbf{\Gls{loco} transfer.} For each held-out collection, a \gls{loco} model is trained on \(k\in\{1,2,3\}\) pages from each of the six other collections, that is, on 6, 12, or 18 pages (\gls{loco}-1, \gls{loco}-2, and \gls{loco}-3). The page sets are nested and taken from the single-collection training pages. The thresholds are selected on up to three validation pages per source collection, so the held-out collection takes no part in training or selection. The result is compared with the in-domain result and with the best off-diagonal single-collection entry of the same column, which overestimates a source chosen in advance because it is identified on test results.
-    \item \textbf{Continuous hold-out transfer.} Between the \gls{loco} and the single-collection setting, the collections are held out one after another in order to avoid conclusions made in a discrete setup. The first held-out collection is the one whose pages differ most from the other collections. In this case the ImageNet ResNet-18 page features of Section~\ref{sec:shot-sampling} are computed for the training and validation pages of all seven collections, standardized, and averaged per collection, and the seven collection means are projected on their first principal component. The furthest collection from the mean of the seven collections on this component is held out first. Starting from \gls{loco}-3 with six source collections, one more source collection is held out at each step, ordered by its distance to the first held-out collection on this component, until a single source collection remains. Two orders are compared, holding out either the most distant or the nearest source collection first. Every step uses the \gls{loco}-3 training and validation pages of the remaining source collections, and every model is evaluated on the test sets of all seven collections.
-\end{itemize}
 
-% Dataset figures removed for now; restore by uncommenting.
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=0.9\linewidth]{graphics/udiads_examples_fest.png}
-%     \caption{U-DIADS-TL pages with their line instances (Latin2, Latin14396, Syriaque 341), reproduced from~\cite{Zottin_2025_FEST}.}
-%     \label{fig:udiads-examples}
-% \end{figure}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{graphics/rq2_pretraining_shots.pdf}
+    \caption{Mask R-CNN (ConvNeXt-Tiny) on DIVA-HisDB: mean line \gls{fm} by number of training pages and initialization. Lines: random selection. Shading: range over the six selection strategies.}
+    \label{fig:rq2-pretraining-shots}
+\end{figure}
 
-% \begin{figure}[H]
-%     \centering
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.31\textheight,keepaspectratio]{graphics/diva_cb55_page.png}
-%         \caption{CB55 page.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.31\textheight,keepaspectratio]{graphics/diva_csg18_page.png}
-%         \caption{CSG18 page.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.31\textheight,keepaspectratio]{graphics/diva_csg863_page.png}
-%         \caption{CSG863 page.}
-%     \end{subfigure}
-%
-%     \medskip
-%
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.20\textheight,keepaspectratio]{graphics/diva_cb55_detail.png}
-%         \caption{CB55 detail.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.20\textheight,keepaspectratio]{graphics/diva_csg18_detail.png}
-%         \caption{CSG18 detail.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.31\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth,height=0.20\textheight,keepaspectratio]{graphics/diva_csg863_detail.png}
-%         \caption{CSG863 detail.}
-%     \end{subfigure}
-%     \caption{DIVA-HisDB pages and details, reproduced from De Nardin et al.~\cite{De_Nardin_2023} (DIVA-HisDB~\cite{diva_hisdb}).}
-%     \label{fig:diva-examples}
-% \end{figure}
+\FloatBarrier
+\label{sec:disc-pretraining}
 
-% \begin{figure}[H]
-%     \centering
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_pinkas.jpg}
-%         \caption{Pinkas.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_onb_cod_syr_1.jpg}
-%         \caption{ONB Cod.\ Syr.\ 1.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_rasam.jpg}
-%         \caption{RASAM.}
-%     \end{subfigure}
-%
-%     \medskip
-%
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_phil_gr_130.jpg}
-%         \caption{Phil.\ gr.\ 130.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_norhand_v3.jpg}
-%         \caption{NorHand v3.}
-%     \end{subfigure}\hfill
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_grpoly-db_handwritten.jpg}
-%         \caption{GRPOLY-DB Handwritten.}
-%     \end{subfigure}
-%
-%     \medskip
-%
-%     \begin{subfigure}[t]{0.32\linewidth}
-%         \centering
-%         \includegraphics[width=\linewidth]{graphics/rq3_rasm2018_2019.jpg}
-%         \caption{RASM2018/2019.}
-%     \end{subfigure}
-%     \caption[Example pages of the seven RQ3 collections]{Example pages of the seven RQ3 collections with ground-truth line polygons. Generated from Pinkas~\cite{Barakat2019Pinkas}, ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1}, RASAM~\cite{VidalGorene2021RASAM}, Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT}, NorHand v3~\cite{Beyer2023NorHand}, GRPOLY-DB~\cite{Gatos2015GRPOLY}, and RASM2018/2019~\cite{KeinanSchoonbaert2019RASM}.}
-%     \label{fig:dataset-examples}
-% \end{figure}
+Without fine-tuning, the CATMuS-pretrained Mask R-CNN finds most DIVA-HisDB lines, with a line recall of 98.2--100.0\% on the three manuscripts, but its line precision is only 59.8--87.9\%, because it also returns lines that the \gls{gt} does not contain. Of its 1,166 predicted lines on the test pages, 882 lie mainly on the main text, which contains 858 \gls{gt} lines, and 265 lie mainly on interlinear glosses and comments.
+
+With one training page, the result depends on which page is selected. As shown in Figure~\ref{fig:rq2-cb55-pages}, CB55 page 0008v has almost no commentary next to the main text, and with this page as the only training page, Mask R-CNN reaches 79.66\% on CB55 instead of 95.85\% and 95.71\% with pages 0011v and 0072v. With one page, the training page therefore has to contain the layout elements of the test pages.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/rq2_cb55_k1_0008v.jpg}\caption{0008v, 79.66\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/rq2_cb55_k1_0011v.jpg}\caption{0011v, 95.85\%.}\end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\linewidth}\centering\includegraphics[width=\linewidth]{graphics/rq2_cb55_k1_0072v.jpg}\caption{0072v, 95.71\%.}\end{subfigure}
+    \caption{CB55 pages that the three seeds select as the only training page, with the line \gls{fm} of Mask R-CNN on the CB55 test pages. Generated from DIVA-HisDB~\cite{diva_hisdb}.}
+    \label{fig:rq2-cb55-pages}
+\end{figure}
+
+In answer to \gls{rq}~2, three training pages per manuscript reach the \gls{sota} on DIVA-HisDB when the model is pretrained on annotated lines, with 98.67\% for Mask R-CNN over three seeds compared with 97.43\% for Mask R-CNN+ with all 20 pages~\cite{signals3030032}.
+
+\FloatBarrier
+
+\section{Cross-Collection Robustness}
+\label{sec:results-rq3}
+
+The following experiments assess how robust a few-shot model is on manuscript collections that were not seen during training. They follow two ideas. First, the number of source collections changes step by step, from no page of the target collection and a single source collection to all other collections in the \gls{loco} setting. The continuous hold-out connects the single-collection and the \gls{loco} setting, as it removes the source collections one after another. Second, a variation of \gls{loco}-1 keeps six training pages but takes them from six, three, or two source collections. Of the stages in Figure~\ref{fig:pipeline-overview}, this section keeps the pipelines fixed and varies the source collections of the training pages. Mask R-CNN, the best pipeline of \gls{rq}~1 and \gls{rq}~2, is compared with the center-line model from the semantic paradigm, to test whether its advantage holds on unseen collections.
+
+The transfer settings and the models are described in Section~\ref{sec:meth-transfer}, and the seven cross-collection datasets in Section~\ref{sec:datasets}. Most of these datasets have no official partition. Therefore, each of them is partitioned once into three training pages, 10\% of the pages for validation, and the remaining pages for testing. Pinkas and NorHand v3 keep their official test sets and take their training and validation pages from the official training part, which for NorHand v3 is a random subset of 30 pages.
+
+\FloatBarrier
+\subsection{Transfer without Fine-Tuning}
+\label{sec:results-rq3-zeroshot}
+
+The first step of the continuous check evaluates the CATMuS-pretrained models without fine-tuning, so it tests how robust the pretraining itself is. As shown in Table~\ref{tab:rq3-zeroshot}, the pretrained center-line model reaches 93.07\% and stays above 84\% on every collection. The pretrained Mask R-CNN reaches 49.09\% and it is worse on all seven collections.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Results of the CATMuS-pretrained models without fine-tuning on the RQ3 collections.}
+    \label{tab:rq3-zeroshot}\label{tab:rq3-zeroshot-center-line}
+    \scriptsize
+    \setlength{\tabcolsep}{2pt}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrcccccccccc@{}}
+        \toprule
+        & & \multicolumn{5}{c}{Mask R-CNN} & \multicolumn{5}{c}{Center-line model} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        Collection & \shortstack{Test\\pages} & Pixel IU & Line IU & DR & RA & FM & Pixel IU & Line IU & DR & RA & FM \\
+        \midrule
+        Pinkas & 6 & 84.73 & 65.60 & 80.10 & 77.34 & 78.63 & 91.63 & 72.90 & 81.10 & 87.76 & 84.22 \\
+        ONB Cod.\ Syr.\ 1 & 123 & 65.30 & 25.16 & 45.29 & 33.25 & 37.76 & 98.17 & 89.25 & 90.90 & 98.06 & 94.17 \\
+        RASAM & 462 & 80.90 & 59.65 & 80.89 & 64.59 & 70.56 & 94.38 & 89.12 & 91.91 & 96.07 & 93.61 \\
+        RASM2018/2019 & 105 & 74.73 & 52.01 & 70.09 & 63.09 & 64.74 & 93.26 & 87.26 & 88.21 & 96.69 & 91.36 \\
+        Phil.\ gr.\ 130 & 13 & 67.25 & 41.12 & 55.74 & 58.86 & 56.75 & 93.01 & 93.44 & 96.02 & 97.12 & 96.53 \\
+        GRPOLY-DB & 38 & 20.92 & 0.04 & 0.16 & 0.05 & 0.07 & 99.60 & 98.78 & 100.00 & 98.78 & 99.37 \\
+        NorHand v3 & 81 & 53.19 & 25.57 & 43.10 & 30.87 & 35.11 & 91.86 & 86.68 & 90.82 & 94.03 & 92.23 \\
+        \midrule
+        Mean &  & 63.86 & 38.45 & 53.62 & 46.87 & 49.09 & 94.56 & 88.21 & 91.28 & 95.50 & 93.07 \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+\FloatBarrier
+\subsection{Single-Collection Transfer}
+\label{sec:results-rq3-protocol-a}
+
+The second step fine-tunes each model on the three training pages of one collection and applies it to the six other collections. As shown in Table~\ref{tab:rq3-matrix-ab-fm}, Mask R-CNN reaches 88.61\% on its own collection and 70.55\% on the other ones. Its result also depends on the source collection. On GRPOLY-DB, it ranges from 1.08\% to 98.25\%, depending on the collection it was trained on.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Single-collection transfer matrices (\gls{fm}). Mask R-CNN uses the fine-tuned weights (\(\alpha=1\)), the center-line model \gls{wiseft} with \(\alpha=0.5\). Gray: in-domain result.}
+        \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}l*{7}{r}rr@{}}
+        \toprule
+        & \multicolumn{7}{c}{Test collection} & \multicolumn{2}{c}{Mean} \\
+        \cmidrule(lr){2-8}\cmidrule(l){9-10}
+        Train & Pinkas & ONB & RASAM & RASM & Phil. & GRPOLY & NorHand & All & Transfer \\
+        \midrule
+        \multicolumn{10}{@{}l}{\textit{Mask R-CNN}\label{tab:rq3-matrix-ab-fm}} \\
+        Pinkas & \cellcolor{gray!20}81.54 & 84.42 & 83.78 & 82.05 & 58.08 & 1.10 & 61.49 & 64.64 & 61.82 \\
+        ONB & 84.76 & \cellcolor{gray!20}96.07 & 92.99 & 89.28 & 53.97 & 63.73 & 79.99 & 80.11 & 77.45 \\
+        RASAM & 82.91 & 94.62 & \cellcolor{gray!20}94.01 & 91.31 & 50.11 & 92.32 & 77.26 & 83.22 & 81.42 \\
+        RASM & 79.94 & 94.09 & 94.01 & \cellcolor{gray!20}90.55 & 38.32 & 18.77 & 69.26 & 69.28 & 65.73 \\
+        Phil. & 83.05 & 78.07 & 81.12 & 76.35 & \cellcolor{gray!20}71.97 & 1.08 & 59.64 & 64.47 & 63.22 \\
+        GRPOLY & 54.70 & 85.75 & 72.39 & 76.98 & 19.93 & \cellcolor{gray!20}99.30 & 58.25 & 66.76 & 61.33 \\
+        NorHand & 77.14 & 93.48 & 90.11 & 85.95 & 52.51 & 98.25 & \cellcolor{gray!20}86.84 & 83.47 & 82.91 \\
+        \midrule
+        Transfer into & 77.08 & 88.41 & 85.73 & 83.65 & 45.49 & 45.88 & 67.65 & 73.13 & 70.55 \\
+        
+        \midrule
+        \multicolumn{10}{@{}l}{\textit{Center-line model}\label{tab:rq3-matrix-center-line-fm}} \\
+        Pinkas & \cellcolor{gray!20}87.62 & 93.35 & 93.59 & 89.89 & 86.17 & 99.32 & 86.32 & 90.89 & 91.44 \\
+        ONB & 86.95 & \cellcolor{gray!20}95.27 & 94.18 & 91.24 & 97.13 & 99.34 & 92.25 & 93.77 & 93.52 \\
+        RASAM & 86.27 & 94.77 & \cellcolor{gray!20}94.20 & 91.11 & 98.43 & 99.30 & 91.74 & 93.69 & 93.60 \\
+        RASM & 85.39 & 95.03 & 93.96 & \cellcolor{gray!20}91.55 & 95.00 & 99.85 & 89.86 & 92.95 & 93.18 \\
+        Phil. & 83.16 & 93.84 & 93.33 & 90.76 & \cellcolor{gray!20}98.52 & 99.24 & 91.71 & 92.94 & 92.01 \\
+        GRPOLY & 84.54 & 95.65 & 94.25 & 90.89 & 96.76 & \cellcolor{gray!20}99.92 & 92.58 & 93.51 & 92.45 \\
+        NorHand & 84.46 & 94.83 & 94.03 & 91.74 & 93.61 & 99.49 & \cellcolor{gray!20}92.81 & 93.00 & 93.03 \\
+        \midrule
+        Transfer into & 85.13 & 94.58 & 93.89 & 90.94 & 94.52 & 99.42 & 90.74 & 92.96 & 92.74 \\
+        
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The center-line model keeps most of its in-domain quality, with 94.27\% in-domain and 92.74\% on the other collections, which is 22.2 percentage points more than Mask R-CNN per target collection. Its result changes by at most 12.26 percentage points between the source collections, on Phil.\ gr.\ 130, and no source--target pair falls below 83\%. The lowest value, 83.16\%, occurs for Phil.\ gr.\ 130\(\rightarrow\)Pinkas.
+
+As shown in Appendix~\ref{app:rq3-wiseft}, interpolating the fine-tuned weights with the pretrained ones by \gls{wiseft} increases performance for Mask R-CNN and decreases performance of center-line model. 
+
+
+\FloatBarrier
+\subsection{Leave-One-Collection-Out Transfer}
+\label{sec:results-rq3-loco}
+
+In the \gls{loco} setting, each model is trained on one, two, or three pages from each of the six other collections. As shown in Table~\ref{tab:rq3-locok}, more source pages improve the transfer of Mask R-CNN. From \gls{loco}-1 to \gls{loco}-3, its mean \gls{fm} on the held-out collections rises from 79.23\% to 85.44\%, and on Phil.\ gr.\ 130 from 25.77\% to 54.12\%. The increase occurs on six of the seven held-out collections, and most of it comes from Phil.\ gr.\ 130, NorHand v3, and GRPOLY-DB.
+
+\begin{table}[htbp]
+    \centering
+    \caption{\Gls{loco} results on the held-out collections, with single-collection references (\gls{fm}) with 3 seeds.}
+    \label{tab:rq3-locok}\label{tab:rq3-locok-maskrcnn}\label{tab:rq3-loco3-center-line}\label{tab:rq3-locok-center-line}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}l*{7}{r}r@{}}
+        \toprule
+        & \multicolumn{7}{c}{Held-out collection} & Mean \\
+        \cmidrule(lr){2-8}
+        Training setting & Pinkas & ONB & RASAM & RASM & Phil. & GRPOLY & NorHand & All \\
+        \midrule
+        \multicolumn{9}{@{}l}{\textit{Mask R-CNN}} \\
+        In-domain (A) & \cellcolor{gray!20}81.54 & \cellcolor{gray!20}96.07 & \cellcolor{gray!20}94.01 & \cellcolor{gray!20}90.55 & \cellcolor{gray!20}71.97 & \cellcolor{gray!20}99.30 & \cellcolor{gray!20}86.84 & 88.61 \\
+        Best source (A) & 84.76 & 94.62 & 94.01 & 91.31 & 58.08 & 98.25 & 79.99 & 85.86 \\
+        \midrule
+        \gls{loco}-1 & 82.05 & 93.64 & 92.33 & 87.97 & 25.77 & 94.35 & 78.46 & 79.23 \\
+        \gls{loco}-2 & 80.63 & 93.28 & 92.20 & 88.07 & 40.28 & 98.49 & 86.37 & 82.76 \\
+        \gls{loco}-3 & 80.32 & 93.97 & 92.47 & 90.77 & 54.12 & 99.33 & 87.12 & 85.44 \\
+        \midrule
+        \multicolumn{9}{@{}l}{\textit{Center-line model}} \\
+        In-domain (A) & \cellcolor{gray!20}87.62 & \cellcolor{gray!20}95.27 & \cellcolor{gray!20}94.20 & \cellcolor{gray!20}91.55 & \cellcolor{gray!20}98.52 & \cellcolor{gray!20}99.92 & \cellcolor{gray!20}92.81 & 94.27 \\
+        \midrule
+        \gls{loco}-1 & 84.10 & 94.21 & 93.62 & 90.56 & 98.25 & 98.74 & 90.54 & 92.86 \\
+        \gls{loco}-2 & 85.14 & 94.56 & 93.46 & 90.30 & 97.01 & 99.58 & 91.41 & 93.07 \\
+        \gls{loco}-3 & 85.74 & 94.41 & 93.63 & 91.01 & 97.15 & 99.76 & 92.00 & 93.39 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+For the center-line model, the number of source pages has little effect. It reaches 92.86\% with \gls{loco}-1 and 93.42\% with \gls{loco}-3, a difference that is not significant (paired Wilcoxon signed-rank test, \(p=0.219\)). Over three training seeds with the same pages, \gls{loco}-3 gives 93.39 \(\pm\) 0.08\%, and the largest standard deviation of a held-out collection is 0.74 percentage points on RASM2018/2019.
+% TODO: Mask R-CNN LOCO-3 has one seed in the current configuration; two more seeds need 14 Colab runs.
+With \gls{loco}-3, it is better than Mask R-CNN on all seven held-out collections, and its result stays between 92.74\% and 93.42\% in all transfer settings. The remaining difference to Mask R-CNN comes mainly from Phil.\ gr.\ 130, with 96.45\% compared with 54.12\%. On GRPOLY-DB and ONB Cod.\ Syr.\ 1, both models are within one percentage point.
+
+
+
+\FloatBarrier
+\subsection{Continuous Hold-Out Transfer}
+\label{sec:results-rq3-stepdown}
+
+The continuous hold-out connects the single-collection and the \gls{loco} setting. It starts from \gls{loco}-3 and removes one source collection after the other until a single source collection remains. GRPOLY-DB lies apart from the other collections and is held out first, and NorHand v3 and RASAM are its nearest collections, as shown in Figure~\ref{fig:rq3-collection-pc1}. As shown in Table~\ref{tab:rq3-stepdown}, the transfer of Mask R-CNN to GRPOLY-DB depends on which collections remain among the sources. As long as NorHand v3 and RASAM remain, it reaches 95.89--99.59\%. Without them, its result drops to 31.21\%, and with only Pinkas and Phil.\ gr.\ 130 to 0.81\%.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{graphics/rq3_collection_pc1.pdf}
+    \caption{Cross-collection datasets on the first principal component of the mean page features (large markers: collections, small markers: pages).}
+    \label{fig:rq3-collection-pc1}
+\end{figure}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Continuous hold-out transfer to GRPOLY-DB (\gls{fm}).}
+    \label{tab:rq3-stepdown}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}c lcc lcc@{}}
+        \toprule
+        & \multicolumn{3}{c}{Most distant held out first} & \multicolumn{3}{c}{Nearest held out first} \\
+        \cmidrule(lr){2-4}\cmidrule(l){5-7}
+        Sources & Held out & Mask R-CNN & Center-line & Held out & Mask R-CNN & Center-line \\
+        \midrule
+        6 & -- & 99.01 & 99.77 & -- & 99.01 & 99.77 \\
+        5 & Phil. & 95.89 & 99.85 & NorHand & 69.29 & 99.41 \\
+        4 & Pinkas & 97.86 & 99.67 & RASAM & 31.21 & 99.76 \\
+        3 & RASM & 99.59 & 99.50 & ONB & 31.76 & 99.85 \\
+        2 & ONB & 99.36 & 99.30 & RASM & 0.81 & 99.36 \\
+        1 & RASAM & 98.25 & 99.30 & Pinkas & 1.08 & 99.32 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The center-line model stays between 99.30\% and 99.85\% in both orders. The values with six source collections come from a repeated \gls{loco}-3 training, in which Mask R-CNN reaches 99.01\% instead of 99.33\%, and the values with one source collection from Table~\ref{tab:rq3-matrix-ab-fm}.
+
+\FloatBarrier
+\subsection{Source Diversity at a Fixed Page Budget}
+\label{sec:results-rq3-budget}
+
+% TODO: budget table center-line: seed 12239164 misses three 2x3 runs, seed 11092001 not trained (Colab rq3b/rq3t stopped).
+
+With a fixed budget of six training pages, only the number of source collections changes. As shown in Table~\ref{tab:rq3-budget}, Mask R-CNN depends on the diversity of the sources. Over three seeds, it reaches 83.56\% with six source collections, 77.55\% with three, and 76.70\% with two. Six source collections are better than three in 16 of 21 pairs of held-out collection and seed and better than two in 15 of 21 pairs. The six-source split has the same structure as \gls{loco}-1 but uses other training pages. With seed 42, Mask R-CNN reaches 86.02\% on these pages instead of 79.23\%, and 60.13\% instead of 25.77\% on Phil.\ gr.\ 130, so its transfer also depends on which pages are drawn.
+
+For the center-line model, the number of source collections has little effect with the same six pages. With seed 42, its mean \gls{fm} on the held-out collections is 93.83\% with six source collections, 93.44\% with three, and 93.69\% with two. Over the 11 held-out collections and seeds for which all three splits are available, six source collections reach 93.05\% and two source collections 92.96\%.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Transfer with a fixed budget of six training pages split over a varying number of source collections, seed 42 (\gls{fm}).}
+    \label{tab:rq3-budget}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}ll*{7}{r}r@{}}
+        \toprule
+        & & \multicolumn{7}{c}{Held-out collection} & Mean \\
+        \cmidrule(lr){3-9}
+        Model & Sources \(\times\) pages & Pinkas & ONB & RASAM & RASM & Phil. & GRPOLY & NorHand & All \\
+        \midrule
+        Mask R-CNN & \(6\times1\) & 85.12 & 93.94 & 92.83 & 86.61 & 60.13 & 99.26 & 84.27 & 86.02 \\
+                   & \(3\times2\) & 84.22 & 93.74 & 91.79 & 86.22 & 37.20 & 82.08 & 83.38 & 79.81 \\
+                   & \(2\times3\) & 77.37 & 91.64 & 93.20 & 88.07 & 51.81 & 88.54 & 79.78 & 81.49 \\
+        \midrule
+        Center-line & \(6\times1\) & 87.49 & 94.40 & 93.94 & 91.08 & 97.88 & 99.68 & 92.36 & 93.83 \\
+                    & \(3\times2\) & 85.52 & 94.96 & 93.94 & 91.31 & 96.80 & 99.66 & 91.90 & 93.44 \\
+                    & \(2\times3\) & 86.65 & 95.14 & 94.09 & 91.03 & 97.38 & 99.61 & 91.93 & 93.69 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\FloatBarrier
+
+Figures~\ref{fig:rq3-summary} and~\ref{fig:rq3-summary-ci} summarize all transfer settings. In answer to \gls{rq}~3, the diversity of the source collections matters for Mask R-CNN but not for the center-line model. For Mask R-CNN, this diversity mainly concerns the line styles of the source collections, such as the size and the density of the lines. With the same six training pages, Mask R-CNN loses 6.01 percentage points on average over three seeds when the pages come from three instead of six collections, while the result of the center-line model changes by less than one percentage point. The pretraining alone is robust for the center-line model, which reaches 93.07\% without fine-tuning compared with 49.09\% for Mask R-CNN. After training on the six other collections (\gls{loco}-3), both models transfer to unseen collections, with 93.42\% for the center-line model and 85.44\% for Mask R-CNN.
+% TODO: RQ3 answer center-line numbers use seeds 42 and 12239164 only.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{graphics/rq3_summary.pdf}
+    \caption[Transfer to unseen collections]{Line \gls{fm} on unseen collections by the number of source collections, from the CATMuS model without fine-tuning (zero) to \gls{loco} (six). Thick tick: mean. Bar: range, whose lower end is the worst unseen collection.}
+    \label{fig:rq3-summary}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{graphics/rq3_summary_ci.pdf}
+    \caption{Mean line \gls{fm} on unseen collections with 95\% confidence intervals (shading) and the worst unseen collection (dashed). Left: from no target page to \gls{loco}-3. Right: six training pages from two, three, or six source collections.}
+    \label{fig:rq3-summary-ci}
+\end{figure}
+
+
+\endgroup

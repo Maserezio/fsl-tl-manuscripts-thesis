@@ -1,0 +1,59 @@
+% Overview of all pipelines by stage: encoder (+ initialization) -> line prediction -> line reconstruction -> export.
+% Same visual language as detection_gt_workflow.tex and semantic_workflow.tex.
+\begingroup
+\input{graphics/segmentation_diagram_styles}
+\tikzset{
+    box/.append style={font=\scriptsize, inner sep=3pt},
+    stage/.style={font=\small\bfseries, anchor=south},
+    grp/.style={rounded corners=4pt, inner sep=5pt},
+}
+\begin{tikzpicture}[font=\footnotesize]
+    % column x positions
+    \def\xe{0}\def\xp{4.4}\def\xr{8.9}\def\xx{13.1}
+    % encoder column
+    \node[model, text width=27mm, minimum height=62mm] (enc) at (\xe,0) {};
+    \node[draw, rounded corners=2pt, fill=white, align=center, font=\scriptsize, text width=24mm, inner sep=2.5pt] (arch) at (\xe,1.55)
+        {\textit{Architecture}\\[1pt]ConvNeXt-Tiny\\PVTv2-B2\\ViT-Small};
+    \node[draw, rounded corners=2pt, fill=white, align=center, font=\scriptsize, text width=24mm, inner sep=2.5pt] (initn) at (\xe,-1.15)
+        {\textit{Initialization}\\[1pt]random\\ImageNet\\DINOv3 (LVD)\\DINOv3 (cBAD)\\CATMuS};
+    \node[font=\scriptsize] at ($(arch.south)!0.5!(initn.north)$) {\(\times\)};
+    \node[box, rotate=90, text width=22mm, minimum height=6mm] (page) at (\xe-2.15,0) {page image};
+    % line prediction
+    \node[model, text width=36mm, minimum height=10mm] (p1) at (\xp, 2.4)  {\textbf{U-Net}\\text line mask};
+    \node[model, text width=36mm, minimum height=10mm] (p2) at (\xp, 0.8)  {\textbf{U-Net}\\center lines, line ends, distances};
+    \node[model, text width=36mm, minimum height=10mm] (p3) at (\xp,-0.8)  {\textbf{RT-DETR}\\one box per line};
+    \node[model, text width=36mm, minimum height=10mm] (p4) at (\xp,-2.4)  {\textbf{Mask R-CNN}\\one box and \(28\times28\) mask per line};
+    % line reconstruction
+    \node[process, text width=38mm, minimum height=10mm] (r1) at (\xr, 2.4)  {\textbf{Projection cuts}\\split the mask into lines};
+    \node[process, text width=38mm, minimum height=10mm] (r2) at (\xr, 0.8)  {\textbf{Center-line decoding}\\ink ownership of the center lines};
+    \node[process, text width=38mm, minimum height=10mm] (r3) at (\xr,-0.8)  {\textbf{BBox U-Net} in each box\\(+ \glsentryshort{dp} seam)};
+    \node[process, text width=38mm, minimum height=10mm] (r4) at (\xr,-2.4)  {\textbf{\glsentryshort{roi} mask} or \textbf{BBox U-Net}\\(+ \glsentryshort{dp} seam)};
+    % export
+    \node[box, text width=22mm, minimum height=12mm] (exp) at (\xx,0) {PAGE XML /\\binary mask};
+    % paradigm groups
+    \begin{scope}[on background layer]
+        \node[grp, fill=blue!6, fit=(p1)(p2)(r1)(r2)] (gs) {};
+        \node[grp, fill=orange!9, fit=(p3)(p4)(r3)(r4)] (gi) {};
+    \end{scope}
+    \node[font=\scriptsize\itshape, text=black!65, anchor=south west] at (gs.north west) {semantic segmentation};
+    \node[font=\scriptsize\itshape, text=black!65, anchor=north west] at (gi.south west) {instance segmentation};
+    % stage headers
+    \node[stage] at (\xe,3.75) {Encoder};
+    \node[stage] at (\xp,3.75) {Line prediction};
+    \node[stage] at (\xr,3.75) {Line reconstruction};
+    \node[stage] at (\xx,3.75) {Export};
+    % arrows
+    \draw[link] (page) -- (enc);
+    \foreach \i in {1,2,3,4} {
+        \draw[link] (enc.east |- p\i.west) -- (p\i.west);
+        \draw[link] (p\i) -- (r\i);
+    }
+    \coordinate (fin) at ($(exp.west)+(-0.45,0)$);
+    \foreach \i in {1,2,3,4} { \draw[semithick] (r\i.east) -| (fin); }
+    \draw[link] (fin) -- (exp);
+    % stages are combinable: center lines provide boxes for the BBox U-Net (U-DIADS-TL)
+    \draw[traininglink] (p2.east) ++(0,-0.18) -- ++(0.45,0) |- ([yshift=0.18cm]r3.west);
+    % the center-line cells can also split the text line mask of the U-Net (U-DIADS-TL)
+    \draw[traininglink] (p1.east) ++(0,-0.18) -- ++(0.18,0) |- ([yshift=0.18cm]r2.west);
+\end{tikzpicture}
+\endgroup

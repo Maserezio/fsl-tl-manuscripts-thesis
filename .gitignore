@@ -27,3 +27,4 @@
 pdfa.xmpi
 main.pdf
 __pycache__/
+.claude/settings.local.json

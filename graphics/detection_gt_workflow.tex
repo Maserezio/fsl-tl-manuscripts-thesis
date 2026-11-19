@@ -9,7 +9,7 @@
     \node[model, text width=44mm] (mrcnn) at (2.9,-3.9) {\textbf{Mask R-CNN}\\region proposals\\and box head};
     \node[model, text width=44mm] (crop) at (-2.9,-6.3) {\textbf{BBox U-Net}\\mask in each box\\\phantom{x}};
     \node[process, text width=44mm] (roi) at (2.9,-6.3) {\textbf{ROI mask}\\Mask R-CNN mask head\\(\(28\times28\))};
-    \node[output, text width=32mm] (seam) at (0,-7.9) {optional DP seam};
+    \node[output, text width=32mm] (seam) at (0,-7.9) {DP seam};
     \node[box, text width=90mm] (lines) at (0,-9.3) {Line instances (pixel masks or PAGE XML polygons)};
     \draw[link] (page) -- (enc);
     % fork from the shared encoder to both detectors

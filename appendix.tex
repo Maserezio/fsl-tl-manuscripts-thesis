@@ -1,64 +1,230 @@
 % !TeX root = main.tex
+\chapter{Datasets and Training Settings}
+\label{app:setup}
+
+Table~\ref{tab:app-datasets} lists the preparation of the datasets of Table~\ref{tab:dataset-splits}.
+
+\section{Datasets}
+\label{app:datasets}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Content and preparation of the datasets.}
+    \label{tab:app-datasets}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{0.92}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lp{0.25\textwidth}p{0.42\textwidth}@{}}
+        \toprule
+        Dataset & Content & Preparation \\
+        \midrule
+        U-DIADS-TL~\cite{Zottin_2025_FEST} & 28 pages each of Latin2, Latin14396, Syriaque 341 & binary line masks, benchmark split of ICDAR 2025 FEST \\
+        DIVA-HisDB~\cite{diva_hisdb} & 50 pages each of CB55, CS18, CS863 & Task~2 PAGE XML polygons and baselines \\
+        CATMuS Medieval~\cite{catmus-medieval} & Latin-script medieval manuscripts & PAGE XML polygons, 15 DIVA-HisDB pages removed \\
+        cBAD 2019~\cite{cbad-2019} & pages of seven European archives & page images only, no labels \\
+        \midrule
+        Pinkas~\cite{Barakat2019Pinkas} & 30 pages, Hebrew & three pages without valid polygons excluded \\
+        ONB Cod.\ Syr.\ 1~\cite{AboudIshac2025ONBSyr1} & 140 folios, Syriac & marginal lines annotated as separate lines \\
+        RASAM~\cite{VidalGorene2021RASAM} & 517 pages, Arabic (Maghrebi) & both parts, IIIF images, polygons rescaled to the image size \\
+        RASM2018/2019~\cite{KeinanSchoonbaert2019RASM} & 120 pages, Arabic & up to \(6464\times8984\) pixels \\
+        Phil.\ gr.\ 130~\cite{SindlevAndersen2026PhilGrGT} & 18 pages, Greek & images from the library viewer, about 47 lines per page \\
+        GRPOLY-DB~\cite{Gatos2015GRPOLY} & 46 pages, Greek polytonic & handwritten part only, wide line polygons \\
+        NorHand v3~\cite{Beyer2023NorHand} & Norwegian letters and diaries & official test set, 30 training pages drawn with seed 42 \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+\FloatBarrier
+\section{Training Settings}
+\label{app:training-settings}
+
+\label{sec:training-setup}\label{sec:training-semantic}\label{sec:training-two-stage}\label{sec:training-mask-rcnn}\label{sec:training-center-line}\label{sec:training-pretraining}
+Tables~\ref{tab:training-settings}--\ref{tab:center-line-params} list the training settings. Every line polygon and every connected component of a U-DIADS-TL mask becomes one instance mask and one \gls{bbox}. The checkpoint, the thresholds, and the postprocessing parameters are selected on the validation pages, except for the center-line model. The BBox U-Net is trained on \gls{gt} crops of the same training pages as the detectors. In \gls{rq}~1, it uses the Tversky loss on U-DIADS-TL and \gls{bce} on DIVA-HisDB. On Mask R-CNN boxes, the confidence threshold is selected by the box F1 score at an \gls{iou} of 0.5, and the padding, the mask threshold, and the minimum instance area by \gls{fm}. The transfer configuration of \gls{rq}~3 was selected on the validation pages of nine source--target pairs.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Training settings of the networks in \gls{rq}~1 and \gls{rq}~2.}
+    \label{tab:training-settings}\label{tab:rq3-center-line-settings}
+    \scriptsize
+    \setlength{\tabcolsep}{1.7pt}
+    \begin{tabular}{@{}llllll@{}}
+        \toprule
+        & U-Net & Center-line & RT-DETR & BBox U-Net & Mask R-CNN \\
+        \midrule
+        Encoder & 3 families & ConvNeXt-Tiny & 3 families & ResNet-34 & 3 families \\
+        Input & \(448^2\) crops & \(512^2\) crops & page, \(1152^2\) & \(1024\times256\) crops & page, \(704^2\)/\(1024^2\) \\
+        Length & \(\le\)100 epochs & 1,500/800 steps & 100 epochs & 50 epochs & 30/200 epochs \\
+        Batch size & 4 & 4 & 1 (\(\times\)2 accum.) & 4 & 1 \\
+        Learning rate & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(10^{-3}\) / \(10^{-4}\) \\
+        Schedule & cosine & one-cycle & constant & constant & cosine \\
+        Loss & BCE + Dice & BCE + Dice, \(L_1\) & RT-DETR loss & BCE / Tversky / SV\(^{a}\) & Mask R-CNN loss \\
+        Augmentation & flip, rotation, B/C & B/C, blur & color jitter & B/C, affine, noise & color jitter \\
+        Checkpoint & val.\ \glsentryshort{pixeliu} & final & val.\ box mAP & val.\ Dice & val.\ split \\
+        Other & -- & Table~\ref{tab:center-line-params} & frozen BatchNorm & \gls{gt} crops & thin anchors\(^{b}\) \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+    \parbox{\linewidth}{\scriptsize \(^{a}\)Tversky loss~\cite{salehi2017tversky} and SuperVoxel loss~\cite{grim2025supervoxel}. \(^{b}\)Anchors for long and thin lines, new box and mask predictors. B/C: brightness and contrast.}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Distillation on cBAD 2019.}
+    \label{tab:distillation}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        Setting & Value \\
+        \midrule
+        Data & 3,021 unlabeled cBAD 2019 pages \\
+        Teacher & DINOv3 ViT-B/16 \\
+        Students & ConvNeXt-Tiny, PVTv2-B2, ViT-Small (random initialization) \\
+        Length & 1,100 epochs (ConvNeXt-Tiny), 300 epochs (PVTv2-B2, ViT-Small) \\
+        Input / batch size & \(224^2\) random crops / 128 (gradient accumulation) \\
+        Optimizer & AdamW, peak learning rate \(1.44\cdot10^{-4}\), weight decay 0.04\(^{a}\) \\
+        Schedule & cosine with 10 warm-up epochs, shorter than recommended~\cite{lightlytrain-distillation} \\
+        Augmentation & random resized crops, flip, color jitter, grayscale, blur \\
+        Checkpoint & last epoch \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+    \parbox{0.86\linewidth}{\scriptsize \(^{a}\)Excluding bias, normalization, and token parameters.}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Pretraining on CATMuS Medieval.}
+    \label{tab:catmus-pretraining}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}lllll@{}}
+        \toprule
+        & Mask R-CNN & RT-DETR & BBox U-Net & Center-line \\
+        \midrule
+        Data & 1,335 / 191 pages & 1,335 / 191 pages & 1,335 / 191 pages & 1,334 pages \\
+        Supervision & line masks & line boxes & line masks in boxes & center lines, ends, distances \\
+        Length & 30 epochs & 30 epochs & 10 epochs & 12,000 steps \\
+        Input & \(704^2\) & \(1152^2\) & \(1024\times256\) crops & \(512^2\) crops \\
+        Batch size & 1 & 1 (\(\times\)2 accum.) & 8 & 4 \\
+        Learning rate & \(10^{-3}\) / \(10^{-4}\) & \(10^{-4}\) & \(3\cdot10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
+        Schedule & cosine & constant & constant & one-cycle \\
+        Loss & Mask R-CNN loss & RT-DETR loss & BCE, then Tversky & BCE + Dice, \(L_1\) \\
+        Augmentation & color jitter & color jitter & B/C, affine, noise & B/C, blur \\
+        Checkpoint & val.\ mask AP@0.5 & val.\ box AP@[0.5:0.95] & val.\ Dice & final \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Settings of the transfer experiments.}
+    \label{tab:rq3-training-settings}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        & Mask R-CNN & Center-line \\
+        \midrule
+        Initialization & ConvNeXt-Tiny, CATMuS & ConvNeXt-Tiny, CATMuS or cBAD \\
+        Input & \(1152^2\) canvas & \(512^2\) crops (Table~\ref{tab:training-settings}) \\
+        Length & 50 epochs & 3,000 steps \\
+        Batch size & 1 & 4 \\
+        Learning rate & \(10^{-3}\) / \(10^{-4}\) & \(3\cdot10^{-4}\) / \(10^{-4}\) \\
+        Schedule & cosine & one-cycle \\
+        Augmentation & scale jitter, photometric & B/C, blur \\
+        Anchors & 32--512 pixels; ratios 0.05--1.0 & -- \\
+        Thresholds & score \(\{0.3,0.5,0.7,0.9\}\), mask \(\{0.3,0.5\}\) & -- \\
+        Export & largest contour, no region clipping & Table~\ref{tab:center-line-params} \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip
+    \end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Training and decoding of the center-line model. \(p\) is the line pitch of Section~\ref{sec:center-line-decoding}. The weights 0.5 were set heuristically.}
+    \label{tab:center-line-params}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{0.92}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lp{0.72\textwidth}@{}}
+        \toprule
+        Step & Setting \\
+        \midrule
+        Page scale & median line thickness \(T_0=24\) pixels~\cite{kodym2021page}, then a random factor \(2^{z}\), \(z\sim\mathcal{N}(0,0.6^2)\) \\
+        Loss & BCE + Dice for the center map and, with weight 0.5, the end map, smooth \(L_1\) for the two distances \\
+        Inference scale & second pass at the scale where the median predicted thickness is \(T_0\)~\cite{kodym2021page} \\
+        End cut & center map minus 0.5 \(\times\) end map before thresholding \\
+        Joining & small gap and offset, or up to \(6\,p\) when no other fragment is near the connection \\
+        Extension, length & along the ink until it stops or meets a line, lines shorter than \(0.5\,p\) discarded \\
+        Ink & Otsu threshold of the page divided by its Gaussian-blurred copy \\
+        Ink ownership & core \(0.12\,p\) wide, free components up to \(0.6\,p\) high join the nearest line within \(p\), rows of three or more components at least \(0.3\,p\) away and components above \(2.5\,p\) stay unassigned \\
+        Line region & vertical closing, dilation by \(0.15\,p\) within the seam-bounded region, clipped to the main-text region if given \\
+        Mask \gls{gt} & band between the 75th percentiles of the upper and lower distances, box padded by 15 pixels \\
+        \bottomrule
+    \end{tabular*}
+\end{table}
+
+
+\FloatBarrier
+
 \chapter{Additional RQ1 Studies}
 \label{app:rq1-extra}
 
-This appendix reports the per-subset results of the benchmark experiments, the encoder-size comparison, and the crop-loss study of the second stage for the boxes of both detectors. All metrics are in percent, and higher values are better.
+All metrics are in percent, and higher values are better.
 
 \FloatBarrier
 \section{Per-Subset Results of the Benchmark Experiments}
 \label{app:rq1-subsets}
 
-Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the results of the three pipelines of Section~\ref{sec:results-models} for every subset and all five metrics, and Tables~\ref{tab:rq1-unet-grouped}--\ref{tab:rq1-maskrcnn-grouped} group them by initialization and encoder family.
+Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the results per subset, and Table~\ref{tab:rq1-unet-grouped} groups them by initialization and encoder family.
 
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{U-Net results per U-DIADS-TL subset.}
     \label{tab:rq1-unet-fm}\label{tab:rq1-unet-udiads-subsets}\label{tab:rq1-unet-udiads-average}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Backbone & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{Latin14396} & \multicolumn{5}{c}{Latin2} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{8}{*}{Latin14396}& ConvNeXt-Tiny & Random & 83.51 & 96.39 & 94.29 & 90.22 & 92.17 \\
-                                & ConvNeXt-Tiny & ImageNet & \textbf{85.09} & 97.04 & \textbf{95.85} & \textbf{95.74} & \textbf{95.79} \\
-                                & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 83.19 & 96.14 & 93.75 & 92.78 & 93.26 \\
-                                & PVTv2-B2 & Random & 83.21 & 96.09 & 93.58 & 89.18 & 91.29 \\
-                                & PVTv2-B2 & ImageNet & 84.35 & 97.13 & 95.57 & 95.31 & 95.43 \\
-                                & ViT-Small & Random & 84.74 & 96.40 & 94.57 & 92.46 & 93.48 \\
-                                & ViT-Small & ImageNet & 84.93 & 96.28 & 94.97 & 93.95 & 94.44 \\
-                                & ViT-Small & DINOv3 (LVD-1689M) & 84.79 & \textbf{97.52} & 95.18 & 95.25 & 95.21 \\
+        ConvNeXt-Tiny & Random & 83.51 & 96.39 & 94.29 & 90.22 & 92.17 & 79.58 & 94.42 & 83.88 & 78.05 & 80.51 \\
+         & ImageNet & \textbf{85.09} & 97.04 & \textbf{95.85} & \textbf{95.74} & \textbf{95.79} & 82.29 & 96.82 & 87.76 & 89.15 & 88.39 \\
+         & DINOv3 (LVD-1689M) & 83.19 & 96.14 & 93.75 & 92.78 & 93.26 & 81.24 & 97.02 & 86.78 & 88.61 & 87.54 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 83.21 & 96.09 & 93.58 & 89.18 & 91.29 & 79.15 & 93.29 & 81.72 & 74.75 & 77.81 \\
+         & ImageNet & 84.35 & 97.13 & 95.57 & 95.31 & 95.43 & 81.02 & 96.75 & 87.26 & 88.56 & 87.84 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 84.74 & 96.40 & 94.57 & 92.46 & 93.48 & 82.08 & \textbf{97.56} & 86.43 & 85.05 & 85.45 \\
+         & ImageNet & 84.93 & 96.28 & 94.97 & 93.95 & 94.44 & 80.85 & 95.56 & 85.67 & 80.95 & 83.02 \\
+         & DINOv3 (LVD-1689M) & 84.79 & \textbf{97.52} & 95.18 & 95.25 & 95.21 & \textbf{82.75} & 97.22 & \textbf{88.11} & \textbf{90.69} & \textbf{89.24} \\
         \midrule
-        \multirow{8}{*}{Latin2} & ConvNeXt-Tiny & Random & 79.58 & 94.42 & 83.88 & 78.05 & 80.51 \\
-                                & ConvNeXt-Tiny & ImageNet & 82.29 & 96.82 & 87.76 & 89.15 & 88.39 \\
-                                & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 81.24 & 97.02 & 86.78 & 88.61 & 87.54 \\
-                                & PVTv2-B2 & Random & 79.15 & 93.29 & 81.72 & 74.75 & 77.81 \\
-                                & PVTv2-B2 & ImageNet & 81.02 & 96.75 & 87.26 & 88.56 & 87.84 \\
-                                & ViT-Small & Random & 82.08 & \textbf{97.56} & 86.43 & 85.05 & 85.45 \\
-                                & ViT-Small & ImageNet & 80.85 & 95.56 & 85.67 & 80.95 & 83.02 \\
-                                & ViT-Small & DINOv3 (LVD-1689M) & \textbf{82.75} & 97.22 & \textbf{88.11} & \textbf{90.69} & \textbf{89.24} \\
+        & & \multicolumn{5}{c}{Syr341} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{8}{*}{Syr341} & ConvNeXt-Tiny & Random & 71.96 & 88.52 & 67.87 & 66.19 & 66.99 \\
-                                & ConvNeXt-Tiny & ImageNet & 72.04 & 88.76 & \textbf{77.06} & \textbf{78.94} & \textbf{77.95} \\
-                                & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 70.71 & 87.96 & 75.41 & 77.93 & 76.62 \\
-                                & PVTv2-B2 & Random & 72.83 & 89.97 & 69.38 & 67.48 & 68.38 \\
-                                & PVTv2-B2 & ImageNet & 71.90 & 89.47 & 76.73 & 78.78 & 77.72 \\
-                                & ViT-Small & Random & 72.04 & 88.50 & 70.17 & 69.86 & 69.98 \\
-                                & ViT-Small & ImageNet & 73.25 & 89.94 & 74.23 & 75.12 & 74.65 \\
-                                & ViT-Small & DINOv3 (LVD-1689M) & \textbf{74.18} & \textbf{91.60} & 74.39 & 75.02 & 74.69 \\
+        ConvNeXt-Tiny & Random & 71.96 & 88.52 & 67.87 & 66.19 & 66.99 & 78.35 & 93.11 & 82.01 & 78.15 & 79.89 \\
+         & ImageNet & 72.04 & 88.76 & \textbf{77.06} & \textbf{78.94} & \textbf{77.95} & 79.81 & 94.21 & \textbf{86.89} & \textbf{87.94} & \textbf{87.38} \\
+         & DINOv3 (LVD-1689M) & 70.71 & 87.96 & 75.41 & 77.93 & 76.62 & 78.38 & 93.71 & 85.31 & 86.44 & 85.81 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 72.83 & 89.97 & 69.38 & 67.48 & 68.38 & 78.40 & 93.12 & 81.56 & 77.14 & 79.16 \\
+         & ImageNet & 71.90 & 89.47 & 76.73 & 78.78 & 77.72 & 79.09 & 94.45 & 86.52 & 87.55 & 87.00 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 72.04 & 88.50 & 70.17 & 69.86 & 69.98 & 79.62 & 94.15 & 83.72 & 82.46 & 82.97 \\
+         & ImageNet & 73.25 & 89.94 & 74.23 & 75.12 & 74.65 & 79.68 & 93.93 & 84.96 & 83.34 & 84.04 \\
+         & DINOv3 (LVD-1689M) & \textbf{74.18} & \textbf{91.60} & 74.39 & 75.02 & 74.69 & \textbf{80.57} & \textbf{95.45} & 85.89 & 86.99 & 86.38 \\
         \midrule
-        \multirow{8}{*}{Mean}     & ConvNeXt-Tiny & Random & 78.35 & 93.11 & 82.01 & 78.15 & 79.89 \\
-                                  & ConvNeXt-Tiny & ImageNet & 79.81 & 94.21 & \textbf{86.89} & \textbf{87.94} & \textbf{87.38} \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 78.38 & 93.71 & 85.31 & 86.44 & 85.81 \\
-                                  & PVTv2-B2 & Random & 78.40 & 93.12 & 81.56 & 77.14 & 79.16 \\
-                                  & PVTv2-B2 & ImageNet & 79.09 & 94.45 & 86.52 & 87.55 & 87.00 \\
-                                  & ViT-Small & Random & 79.62 & 94.15 & 83.72 & 82.46 & 82.97 \\
-                                  & ViT-Small & ImageNet & 79.68 & 93.93 & 84.96 & 83.34 & 84.04 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & \textbf{80.57} & \textbf{95.45} & 85.89 & 86.99 & 86.38 \\
-        \midrule
-        \multicolumn{3}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & \textbf{96.10} & 81.50 & 84.90 & 83.00 \\
-        \multicolumn{3}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
-        \multicolumn{3}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & \textbf{83.72} & 94.27 & \textbf{87.69} & 50.28 & 63.35 \\
+        \multicolumn{7}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & \textbf{96.10} & 81.50 & 84.90 & 83.00 \\
+        \multicolumn{7}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
+        \multicolumn{7}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & \textbf{83.72} & 94.27 & \textbf{87.69} & 50.28 & 63.35 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -66,48 +232,43 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{U-Net results per DIVA-HisDB subset.}
     \label{tab:rq1-unet-diva-subsets}\label{tab:rq1-unet-diva-average}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Backbone & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{CB55} & \multicolumn{5}{c}{CS18} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{8}{*}{CB55}     & ConvNeXt-Tiny & Random & 77.75 & 74.01 & 80.41 & 84.76 & 82.42 \\
-                                  & ConvNeXt-Tiny & ImageNet & \textbf{89.34} & \textbf{94.83} & \textbf{96.06} & \textbf{98.60} & \textbf{97.29} \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 88.48 & 93.58 & 95.07 & 98.28 & 96.60 \\
-                                  & PVTv2-B2 & Random & 70.26 & 62.39 & 70.76 & 76.62 & 73.49 \\
-                                  & PVTv2-B2 & ImageNet & 84.30 & 89.72 & 92.79 & 95.95 & 94.31 \\
-                                  & ViT-Small & Random & 75.50 & 78.62 & 85.89 & 88.01 & 86.88 \\
-                                  & ViT-Small & ImageNet & 85.81 & 86.79 & 94.67 & 91.59 & 92.00 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 75.99 & 76.58 & 80.79 & 89.32 & 84.72 \\
+        ConvNeXt-Tiny & Random & 77.75 & 74.01 & 80.41 & 84.76 & 82.42 & 93.06 & 92.37 & 94.39 & \textbf{97.21} & 95.76 \\
+         & ImageNet & \textbf{89.34} & \textbf{94.83} & \textbf{96.06} & \textbf{98.60} & \textbf{97.29} & 86.12 & 79.99 & 84.45 & 91.79 & 87.81 \\
+         & DINOv3 (LVD-1689M) & 88.48 & 93.58 & 95.07 & 98.28 & 96.60 & 88.65 & 85.04 & 88.15 & 94.14 & 90.84 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 70.26 & 62.39 & 70.76 & 76.62 & 73.49 & \textbf{93.50} & 92.33 & 94.45 & 96.86 & 95.62 \\
+         & ImageNet & 84.30 & 89.72 & 92.79 & 95.95 & 94.31 & 81.95 & 69.61 & 77.04 & 86.24 & 81.31 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 75.50 & 78.62 & 85.89 & 88.01 & 86.88 & 88.86 & 84.06 & 88.89 & 92.42 & 90.59 \\
+         & ImageNet & 85.81 & 86.79 & 94.67 & 91.59 & 92.00 & 93.23 & \textbf{93.42} & \textbf{95.93} & 97.03 & \textbf{96.46} \\
+         & DINOv3 (LVD-1689M) & 75.99 & 76.58 & 80.79 & 89.32 & 84.72 & 85.38 & 79.05 & 82.96 & 92.87 & 87.46 \\
         \midrule
-        \multirow{8}{*}{CS18}     & ConvNeXt-Tiny & Random & 93.06 & 92.37 & 94.39 & \textbf{97.21} & 95.76 \\
-                                  & ConvNeXt-Tiny & ImageNet & 86.12 & 79.99 & 84.45 & 91.79 & 87.81 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 88.65 & 85.04 & 88.15 & 94.14 & 90.84 \\
-                                  & PVTv2-B2 & Random & \textbf{93.50} & 92.33 & 94.45 & 96.86 & 95.62 \\
-                                  & PVTv2-B2 & ImageNet & 81.95 & 69.61 & 77.04 & 86.24 & 81.31 \\
-                                  & ViT-Small & Random & 88.86 & 84.06 & 88.89 & 92.42 & 90.59 \\
-                                  & ViT-Small & ImageNet & 93.23 & \textbf{93.42} & \textbf{95.93} & 97.03 & \textbf{96.46} \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 85.38 & 79.05 & 82.96 & 92.87 & 87.46 \\
+        & & \multicolumn{5}{c}{CS863} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{8}{*}{CS863}    & ConvNeXt-Tiny & Random & 90.66 & 94.21 & 97.08 & 96.47 & 96.75 \\
-                                  & ConvNeXt-Tiny & ImageNet & \textbf{96.78} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 96.31 & 99.67 & 99.67 & \textbf{100.00} & 99.83 \\
-                                  & PVTv2-B2 & Random & 92.31 & 96.44 & 97.94 & 98.27 & 98.10 \\
-                                  & PVTv2-B2 & ImageNet & 96.50 & 99.67 & 99.67 & \textbf{100.00} & 99.83 \\
-                                  & ViT-Small & Random & 83.36 & 85.11 & 90.79 & 89.34 & 90.03 \\
-                                  & ViT-Small & ImageNet & 83.80 & 85.12 & 90.12 & 89.37 & 89.72 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 92.76 & 96.12 & 98.62 & 97.34 & 97.95 \\
-        \midrule
-        \multirow{8}{*}{Mean}     & ConvNeXt-Tiny & Random & 87.16 & 86.86 & 90.63 & 92.81 & 91.64 \\
-                                  & ConvNeXt-Tiny & ImageNet & 90.75 & 91.61 & 93.50 & 96.79 & 95.03 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & \textbf{91.15} & \textbf{92.76} & \textbf{94.30} & \textbf{97.47} & \textbf{95.76} \\
-                                  & PVTv2-B2 & Random & 85.36 & 83.72 & 87.72 & 90.58 & 89.07 \\
-                                  & PVTv2-B2 & ImageNet & 87.58 & 86.33 & 89.83 & 94.06 & 91.82 \\
-                                  & ViT-Small & Random & 82.57 & 82.60 & 88.52 & 89.92 & 89.17 \\
-                                  & ViT-Small & ImageNet & 87.61 & 88.44 & 93.57 & 92.66 & 92.73 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 84.71 & 83.92 & 87.46 & 93.18 & 90.04 \\
+        ConvNeXt-Tiny & Random & 90.66 & 94.21 & 97.08 & 96.47 & 96.75 & 87.16 & 86.86 & 90.63 & 92.81 & 91.64 \\
+         & ImageNet & \textbf{96.78} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & 90.75 & 91.61 & 93.50 & 96.79 & 95.03 \\
+         & DINOv3 (LVD-1689M) & 96.31 & 99.67 & 99.67 & \textbf{100.00} & 99.83 & \textbf{91.15} & \textbf{92.76} & \textbf{94.30} & \textbf{97.47} & \textbf{95.76} \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 92.31 & 96.44 & 97.94 & 98.27 & 98.10 & 85.36 & 83.72 & 87.72 & 90.58 & 89.07 \\
+         & ImageNet & 96.50 & 99.67 & 99.67 & \textbf{100.00} & 99.83 & 87.58 & 86.33 & 89.83 & 94.06 & 91.82 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 83.36 & 85.11 & 90.79 & 89.34 & 90.03 & 82.57 & 82.60 & 88.52 & 89.92 & 89.17 \\
+         & ImageNet & 83.80 & 85.12 & 90.12 & 89.37 & 89.72 & 87.61 & 88.44 & 93.57 & 92.66 & 92.73 \\
+         & DINOv3 (LVD-1689M) & 92.76 & 96.12 & 98.62 & 97.34 & 97.95 & 84.71 & 83.92 & 87.46 & 93.18 & 90.04 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -115,78 +276,60 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{RT-DETR + BBox U-Net results per U-DIADS-TL subset.}
     \label{tab:rq1-rtdetr-fm}\label{tab:rq1-rtdetr-udiads-subsets}\label{tab:rq1-rtdetr-udiads-average}
-    \renewcommand{\arraystretch}{0.90}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Backbone & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{Latin14396} & \multicolumn{5}{c}{Latin2} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{Latin14396}& ConvNeXt-Tiny & Random & 62.45 & 44.56 & 33.69 & 25.24 & 28.67 \\
-                                  & ConvNeXt-Tiny & ImageNet & 78.16 & 95.46 & 88.05 & 90.57 & 89.11 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 54.78 & 31.71 & 12.66 & 4.27 & 6.37 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 62.55 & 90.64 & 75.72 & 80.29 & 77.10 \\
-                                  & ConvNeXt-Tiny & CATMuS & 86.43 & 96.30 & 94.05 & 92.25 & 93.09 \\
-                                  & PVTv2-B2 & Random & 82.35 & 92.57 & 51.08 & 74.57 & 59.87 \\
-                                  & PVTv2-B2 & ImageNet & 86.69 & 96.63 & 86.37 & 84.27 & 85.12 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 79.13 & 93.44 & 86.51 & 83.83 & 85.08 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{87.76} & \textbf{97.35} & \textbf{95.24} & \textbf{93.91} & \textbf{94.56} \\
-                                  & ViT-Small & Random & 84.62 & 94.68 & 75.52 & 87.49 & 80.49 \\
-                                  & ViT-Small & ImageNet & 87.42 & 97.01 & 86.22 & 92.39 & 88.79 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 87.02 & 95.97 & 91.62 & 78.21 & 84.11 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 75.04 & 93.46 & 87.85 & 86.91 & 87.28 \\
-                                  & ViT-Small & CATMuS & 87.59 & 97.32 & 94.99 & 93.75 & 94.32 \\
+        ConvNeXt-Tiny & Random & 62.45 & 44.56 & 33.69 & 25.24 & 28.67 & 72.33 & 70.18 & 51.84 & 46.72 & 48.26 \\
+         & ImageNet & 78.16 & 95.46 & 88.05 & 90.57 & 89.11 & 85.40 & 95.33 & 83.46 & 84.89 & 83.78 \\
+         & DINOv3 (LVD-1689M) & 54.78 & 31.71 & 12.66 & 4.27 & 6.37 & 65.01 & 51.18 & 36.30 & 36.57 & 35.85 \\
+         & DINOv3 (cBAD) & 62.55 & 90.64 & 75.72 & 80.29 & 77.10 & 77.90 & 92.36 & 76.86 & 73.49 & 74.22 \\
+         & CATMuS & 87.21 & 96.97 & 92.98 & 94.04 & 93.48 & 86.25 & 96.99 & 90.49 & 92.93 & 91.67 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 82.35 & 92.57 & 51.08 & 74.57 & 59.87 & 83.73 & 93.50 & 56.68 & 71.08 & 62.73 \\
+         & ImageNet & 86.69 & 96.63 & 86.37 & 84.27 & 85.12 & 86.05 & 95.84 & 80.62 & 81.26 & 80.27 \\
+         & DINOv3 (cBAD) & 79.13 & 93.44 & 86.51 & 83.83 & 85.08 & 78.16 & 91.04 & 74.17 & 56.74 & 63.73 \\
+         & CATMuS & 87.42 & \textbf{97.55} & 94.54 & \textbf{96.68} & \textbf{95.60} & 86.15 & 97.34 & \textbf{92.05} & 94.30 & \textbf{93.12} \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 84.62 & 94.68 & 75.52 & 87.49 & 80.49 & 70.24 & 65.26 & 44.75 & 52.02 & 47.14 \\
+         & ImageNet & 87.42 & 97.01 & 86.22 & 92.39 & 88.79 & 84.14 & 94.51 & 72.69 & 80.74 & 75.93 \\
+         & DINOv3 (LVD-1689M) & 87.02 & 95.97 & 91.62 & 78.21 & 84.11 & 82.74 & 94.02 & 78.84 & 67.78 & 71.97 \\
+         & DINOv3 (cBAD) & 75.04 & 93.46 & 87.85 & 86.91 & 87.28 & 77.79 & 91.81 & 83.10 & 66.00 & 72.55 \\
+         & CATMuS & \textbf{87.57} & 97.24 & \textbf{94.89} & 93.55 & 94.18 & \textbf{86.78} & \textbf{98.38} & 89.88 & \textbf{95.93} & 92.70 \\
         \midrule
-        \multirow{14}{*}{Latin2}  & ConvNeXt-Tiny & Random & 72.33 & 70.18 & 51.84 & 46.72 & 48.26 \\
-                                  & ConvNeXt-Tiny & ImageNet & 85.40 & 95.33 & 83.46 & 84.89 & 83.78 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 65.01 & 51.18 & 36.30 & 36.57 & 35.85 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 77.90 & 92.36 & 76.86 & 73.49 & 74.22 \\
-                                  & ConvNeXt-Tiny & CATMuS & 86.31 & \textbf{97.62} & 90.82 & \textbf{94.18} & \textbf{92.42} \\
-                                  & PVTv2-B2 & Random & 83.73 & 93.50 & 56.68 & 71.08 & 62.73 \\
-                                  & PVTv2-B2 & ImageNet & 86.05 & 95.84 & 80.62 & 81.26 & 80.27 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 78.16 & 91.04 & 74.17 & 56.74 & 63.73 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{86.74} & 97.37 & \textbf{92.86} & 91.47 & 92.14 \\
-                                  & ViT-Small & Random & 70.24 & 65.26 & 44.75 & 52.02 & 47.14 \\
-                                  & ViT-Small & ImageNet & 84.14 & 94.51 & 72.69 & 80.74 & 75.93 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 82.74 & 94.02 & 78.84 & 67.78 & 71.97 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 77.79 & 91.81 & 83.10 & 66.00 & 72.55 \\
-                                  & ViT-Small & CATMuS & 86.34 & 97.48 & 89.85 & 93.79 & 91.73 \\
+        & & \multicolumn{5}{c}{Syr341} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{Syr341}  & ConvNeXt-Tiny & Random & 61.64 & 49.35 & 24.17 & 22.40 & 23.23 \\
-                                  & ConvNeXt-Tiny & ImageNet & 78.08 & 93.58 & 76.88 & 80.66 & 78.69 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 79.91 & 95.57 & 82.78 & 86.27 & 84.47 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 74.18 & 74.34 & 54.39 & 57.76 & 56.00 \\
-                                  & ConvNeXt-Tiny & CATMuS & 79.94 & \textbf{96.39} & 84.22 & \textbf{87.49} & \textbf{85.82} \\
-                                  & PVTv2-B2 & Random & 77.17 & 93.02 & 57.05 & 72.86 & 63.86 \\
-                                  & PVTv2-B2 & ImageNet & 79.59 & 96.15 & 68.90 & 85.43 & 76.25 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 74.98 & 74.27 & 57.57 & 60.64 & 59.05 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{80.17} & 95.91 & \textbf{84.92} & 86.53 & 85.71 \\
-                                  & ViT-Small & Random & 54.39 & 39.25 & 5.31 & 9.27 & 6.74 \\
-                                  & ViT-Small & ImageNet & 76.17 & 82.34 & 58.96 & 37.54 & 45.78 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 79.69 & 95.31 & 78.33 & 83.56 & 80.78 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 74.32 & 75.79 & 58.39 & 60.57 & 59.44 \\
-                                  & ViT-Small & CATMuS & 80.10 & 96.16 & 83.20 & 87.01 & 85.06 \\
+        ConvNeXt-Tiny & Random & 61.64 & 49.35 & 24.17 & 22.40 & 23.23 & 65.47 & 54.70 & 36.57 & 31.46 & 33.39 \\
+         & ImageNet & 78.08 & 93.58 & 76.88 & 80.66 & 78.69 & 80.54 & 94.79 & 82.80 & 85.37 & 83.86 \\
+         & DINOv3 (LVD-1689M) & 79.91 & 95.57 & 82.78 & 86.27 & 84.47 & 66.57 & 59.49 & 43.91 & 42.37 & 42.23 \\
+         & DINOv3 (cBAD) & 74.18 & 74.34 & 54.39 & 57.76 & 56.00 & 71.54 & 85.78 & 68.99 & 70.51 & 69.10 \\
+         & CATMuS & \textbf{80.08} & \textbf{96.36} & 82.57 & 86.65 & 84.56 & 84.51 & 96.77 & 88.68 & 91.21 & 89.90 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 77.17 & 93.02 & 57.05 & 72.86 & 63.86 & 81.08 & 93.03 & 54.94 & 72.84 & 62.15 \\
+         & ImageNet & 79.59 & 96.15 & 68.90 & 85.43 & 76.25 & 84.11 & 96.21 & 78.63 & 83.65 & 80.55 \\
+         & DINOv3 (cBAD) & 74.98 & 74.27 & 57.57 & 60.64 & 59.05 & 77.43 & 86.25 & 72.75 & 67.07 & 69.29 \\
+         & CATMuS & 80.06 & 96.16 & \textbf{84.92} & \textbf{87.97} & \textbf{86.41} & 84.55 & 97.01 & \textbf{90.50} & \textbf{92.98} & \textbf{91.71} \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 54.39 & 39.25 & 5.31 & 9.27 & 6.74 & 69.75 & 66.39 & 41.86 & 49.59 & 44.79 \\
+         & ImageNet & 76.17 & 82.34 & 58.96 & 37.54 & 45.78 & 82.57 & 91.28 & 72.62 & 70.22 & 70.17 \\
+         & DINOv3 (LVD-1689M) & 79.69 & 95.31 & 78.33 & 83.56 & 80.78 & 83.15 & 95.10 & 82.93 & 76.52 & 78.95 \\
+         & DINOv3 (cBAD) & 74.32 & 75.79 & 58.39 & 60.57 & 59.44 & 75.72 & 87.02 & 76.45 & 71.16 & 73.09 \\
+         & CATMuS & 80.06 & 95.93 & 84.70 & 87.19 & 85.92 & \textbf{84.80} & \textbf{97.18} & 89.82 & 92.22 & 90.93 \\
         \midrule
-        \multirow{14}{*}{Mean}    & ConvNeXt-Tiny & Random & 65.47 & 54.70 & 36.57 & 31.46 & 33.39 \\
-                                  & ConvNeXt-Tiny & ImageNet & 80.54 & 94.79 & 82.80 & 85.37 & 83.86 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 66.57 & 59.49 & 43.91 & 42.37 & 42.23 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 71.54 & 85.78 & 68.99 & 70.51 & 69.10 \\
-                                  & ConvNeXt-Tiny & CATMuS & 84.23 & 96.77 & 89.70 & 91.31 & 90.44 \\
-                                  & PVTv2-B2 & Random & 81.08 & 93.03 & 54.94 & 72.84 & 62.15 \\
-                                  & PVTv2-B2 & ImageNet & 84.11 & 96.21 & 78.63 & 83.65 & 80.55 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 77.43 & 86.25 & 72.75 & 67.07 & 69.29 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{84.89} & 96.88 & \textbf{91.00} & 90.64 & \textbf{90.80} \\
-                                  & ViT-Small & Random & 69.75 & 66.39 & 41.86 & 49.59 & 44.79 \\
-                                  & ViT-Small & ImageNet & 82.57 & 91.28 & 72.62 & 70.22 & 70.17 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 83.15 & 95.10 & 82.93 & 76.52 & 78.95 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 75.72 & 87.02 & 76.45 & 71.16 & 73.09 \\
-                                  & ViT-Small & CATMuS & 84.68 & \textbf{96.99} & 89.35 & \textbf{91.52} & 90.37 \\
-        \midrule
-        \multicolumn{3}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & 96.10 & 81.50 & 84.90 & 83.00 \\
-        \multicolumn{3}{@{}l}{VAI-OCR, two-stage (FEST 2025)~\cite{Zottin_2025_FEST}} & 64.90 & 74.70 & 70.90 & 79.50 & 74.80 \\
-        \multicolumn{3}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
-        \multicolumn{3}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & 83.72 & 94.27 & 87.69 & 50.28 & 63.35 \\
+        \multicolumn{7}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & 96.10 & 81.50 & 84.90 & 83.00 \\
+        \multicolumn{7}{@{}l}{VAI-OCR, two-stage (FEST 2025)~\cite{Zottin_2025_FEST}} & 64.90 & 74.70 & 70.90 & 79.50 & 74.80 \\
+        \multicolumn{7}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
+        \multicolumn{7}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & 83.72 & 94.27 & 87.69 & 50.28 & 63.35 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -194,77 +337,59 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{RT-DETR + BBox U-Net results per DIVA-HisDB subset.}
     \label{tab:rq1-rtdetr-diva-subsets}\label{tab:rq1-rtdetr-diva-average}
-    \renewcommand{\arraystretch}{0.88}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Method & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{CB55} & \multicolumn{5}{c}{CS18} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{CB55}    & ConvNeXt-Tiny & Random & 93.97 & 94.31 & 94.63 & \textbf{99.68} & 96.87 \\
-                                  & ConvNeXt-Tiny & ImageNet & 95.97 & 95.88 & 96.52 & 99.36 & 97.83 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & \textbf{97.56} & \textbf{96.54} & 97.47 & 99.03 & \textbf{98.20} \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 92.40 & 92.63 & 93.24 & 99.35 & 96.09 \\
-                                  & ConvNeXt-Tiny & CATMuS & 95.71 & 95.60 & 97.77 & 97.73 & 97.71 \\
-                                  & PVTv2-B2 & Random & 94.30 & 94.42 & 97.78 & 96.51 & 97.09 \\
-                                  & PVTv2-B2 & ImageNet & 94.35 & 94.42 & 96.83 & 97.51 & 97.07 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 95.81 & 94.38 & 97.12 & 97.13 & 97.05 \\
-                                  & PVTv2-B2 & CATMuS & 92.26 & 92.57 & 93.72 & 98.53 & 95.93 \\
-                                  & ViT-Small & Random & 93.84 & 93.46 & 97.43 & 95.96 & 96.56 \\
-                                  & ViT-Small & ImageNet & 96.92 & 96.48 & 97.11 & 99.32 & 98.17 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 95.12 & 95.25 & 96.81 & 98.42 & 97.51 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 95.31 & 95.81 & 96.12 & 99.67 & 97.84 \\
-                                  & ViT-Small & CATMuS & 94.36 & 94.28 & \textbf{97.81} & 96.21 & 96.97 \\
+        ConvNeXt-Tiny & Random & 95.54 & 95.58 & 95.90 & \textbf{99.68} & 97.64 & 77.99 & 74.63 & 79.92 & 91.69 & 84.89 \\
+         & ImageNet & 95.63 & 95.55 & 96.18 & 99.37 & 97.65 & 75.92 & 71.66 & 77.78 & 90.41 & 82.94 \\
+         & DINOv3 (LVD-1689M) & 94.91 & 93.50 & 97.77 & 95.61 & 96.59 & 77.79 & 74.11 & 83.70 & 86.45 & 84.70 \\
+         & DINOv3 (cBAD) & 92.40 & 92.63 & 93.24 & 99.36 & 96.09 & 78.36 & 73.14 & 83.66 & 85.62 & 83.95 \\
+         & CATMuS & 89.46 & 89.65 & 93.82 & 95.50 & 94.01 & \textbf{90.90} & \textbf{87.76} & \textbf{92.59} & \textbf{94.42} & \textbf{93.34} \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 94.30 & 94.42 & 97.78 & 96.51 & 97.09 & 84.70 & 81.61 & 90.37 & 90.26 & 89.72 \\
+         & ImageNet & 94.35 & 94.42 & 96.83 & 97.51 & 97.07 & 82.40 & 79.29 & 88.50 & 88.70 & 88.18 \\
+         & DINOv3 (cBAD) & 95.81 & 94.38 & 97.12 & 97.13 & 97.05 & 86.27 & 83.11 & 89.26 & 92.00 & 90.34 \\
+         & CATMuS & 96.43 & 95.97 & \textbf{98.11} & 97.80 & 97.91 & 87.80 & 83.13 & 89.20 & 92.13 & 90.40 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 93.84 & 93.47 & 97.43 & 95.96 & 96.56 & 80.19 & 79.22 & 84.08 & 93.49 & 88.18 \\
+         & ImageNet & \textbf{96.92} & \textbf{96.48} & 97.11 & 99.32 & \textbf{98.17} & 82.17 & 78.44 & 84.02 & 91.88 & 87.57 \\
+         & DINOv3 (LVD-1689M) & 95.12 & 95.25 & 96.81 & 98.42 & 97.51 & 79.41 & 73.44 & 83.34 & 86.68 & 84.40 \\
+         & DINOv3 (cBAD) & 95.31 & 95.81 & 96.12 & 99.67 & 97.84 & 80.69 & 77.32 & 84.77 & 89.84 & 86.66 \\
+         & CATMuS & 89.63 & 87.93 & 94.71 & 92.66 & 93.51 & 90.03 & 85.75 & 90.74 & 93.91 & 92.09 \\
         \midrule
-        \multirow{14}{*}{CS18}    & ConvNeXt-Tiny & Random & 77.99 & 74.63 & 79.92 & 91.69 & 84.89 \\
-                                  & ConvNeXt-Tiny & ImageNet & 81.60 & 76.67 & 84.07 & 88.83 & 86.07 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 56.34 & 53.79 & 59.63 & 89.35 & 67.25 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 78.36 & 73.14 & 83.66 & 85.62 & 83.95 \\
-                                  & ConvNeXt-Tiny & CATMuS & 90.57 & 86.56 & \textbf{92.59} & 92.85 & 92.54 \\
-                                  & PVTv2-B2 & Random & 84.70 & 81.61 & 90.37 & 90.26 & 89.72 \\
-                                  & PVTv2-B2 & ImageNet & 82.40 & 79.29 & 88.50 & 88.70 & 88.18 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 86.27 & 83.11 & 89.26 & 92.00 & 90.34 \\
-                                  & PVTv2-B2 & CATMuS & 90.23 & 86.16 & 90.74 & 94.18 & 92.27 \\
-                                  & ViT-Small & Random & 80.19 & 79.21 & 84.08 & 93.49 & 88.18 \\
-                                  & ViT-Small & ImageNet & 82.17 & 78.44 & 84.02 & 91.88 & 87.57 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 79.41 & 73.44 & 83.33 & 86.68 & 84.40 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 80.69 & 77.32 & 84.77 & 89.84 & 86.66 \\
-                                  & ViT-Small & CATMuS & \textbf{91.75} & \textbf{88.10} & 91.82 & \textbf{95.65} & \textbf{93.59} \\
+        & & \multicolumn{5}{c}{CS863} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{CS863}   & ConvNeXt-Tiny & Random & 84.35 & 78.41 & 80.11 & 96.72 & 87.52 \\
-                                  & ConvNeXt-Tiny & ImageNet & 87.45 & 81.76 & 84.43 & 96.29 & 89.62 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 86.88 & 82.63 & 85.13 & 96.59 & 89.98 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 82.73 & 77.33 & 79.83 & 95.90 & 86.90 \\
-                                  & ConvNeXt-Tiny & CATMuS & 88.55 & 82.78 & \textbf{87.06} & 93.03 & 89.75 \\
-                                  & PVTv2-B2 & Random & 72.51 & 66.58 & 68.50 & 94.09 & 78.61 \\
-                                  & PVTv2-B2 & ImageNet & 87.82 & 80.07 & 81.19 & \textbf{97.90} & 88.41 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 85.98 & 79.60 & 84.72 & 92.18 & 88.09 \\
-                                  & PVTv2-B2 & CATMuS & 85.17 & 78.90 & 82.48 & 94.53 & 87.38 \\
-                                  & ViT-Small & Random & \textbf{88.94} & \textbf{84.36} & 86.40 & 97.16 & \textbf{91.15} \\
-                                  & ViT-Small & ImageNet & 78.70 & 72.08 & 75.28 & 94.04 & 82.99 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 86.72 & 79.99 & 83.11 & 94.88 & 88.34 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 78.37 & 73.55 & 75.43 & 97.12 & 83.97 \\
-                                  & ViT-Small & CATMuS & 88.59 & 82.35 & 84.13 & 96.83 & 89.62 \\
+        ConvNeXt-Tiny & Random & \textbf{90.11} & \textbf{84.63} & 86.09 & 97.06 & 91.02 & 87.88 & 84.94 & 87.30 & \textbf{96.14} & 91.18 \\
+         & ImageNet & 84.92 & 79.54 & 82.04 & 96.60 & 88.43 & 85.49 & 82.25 & 85.33 & 95.46 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 86.88 & 82.63 & 85.13 & 96.59 & 89.98 & 86.53 & 83.42 & 88.87 & 92.88 & 90.43 \\
+         & DINOv3 (cBAD) & 82.73 & 77.33 & 79.83 & 95.90 & 86.90 & 84.50 & 81.03 & 85.57 & 93.62 & 88.98 \\
+         & CATMuS & 84.64 & 77.63 & 83.80 & 91.24 & 86.87 & 88.33 & 85.01 & 90.07 & 93.72 & 91.41 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 72.51 & 66.58 & 68.50 & 94.09 & 78.61 & 83.84 & 80.87 & 85.55 & 93.62 & 88.47 \\
+         & ImageNet & 87.82 & 80.07 & 81.19 & \textbf{97.90} & 88.41 & 88.19 & 84.59 & 88.84 & 94.70 & 91.22 \\
+         & DINOv3 (cBAD) & 85.98 & 79.60 & 84.72 & 92.18 & 88.09 & \textbf{89.35} & \textbf{85.70} & 90.37 & 93.77 & 91.83 \\
+         & CATMuS & 79.83 & 73.63 & 78.73 & 92.04 & 82.73 & 88.02 & 84.24 & 88.68 & 93.99 & 90.35 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 88.94 & 84.36 & \textbf{86.40} & 97.16 & \textbf{91.15} & 87.66 & 85.68 & 89.30 & 95.54 & \textbf{91.96} \\
+         & ImageNet & 78.70 & 72.08 & 75.28 & 94.04 & 82.99 & 85.93 & 82.33 & 85.47 & 95.08 & 89.58 \\
+         & DINOv3 (LVD-1689M) & 86.72 & 79.99 & 83.11 & 94.88 & 88.34 & 87.08 & 82.89 & 87.75 & 93.33 & 90.08 \\
+         & DINOv3 (cBAD) & 78.37 & 73.55 & 75.43 & 97.12 & 83.97 & 84.79 & 82.23 & 85.44 & 95.54 & 89.49 \\
+         & CATMuS & 88.00 & 81.18 & 85.77 & 93.47 & 89.15 & 89.22 & 84.95 & \textbf{90.41} & 93.35 & 91.58 \\
         \midrule
-        \multirow{14}{*}{Mean}    & ConvNeXt-Tiny & Random & 85.44 & 82.45 & 84.88 & 96.03 & 89.76 \\
-                                  & ConvNeXt-Tiny & ImageNet & 88.34 & 84.77 & 88.34 & 94.83 & 91.18 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 80.26 & 77.66 & 80.74 & 94.99 & 85.15 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 84.50 & 81.03 & 85.57 & 93.62 & 88.98 \\
-                                  & ConvNeXt-Tiny & CATMuS & 91.61 & 88.31 & 92.48 & 94.54 & 93.34 \\
-                                  & PVTv2-B2 & Random & 83.84 & 80.87 & 85.55 & 93.62 & 88.47 \\
-                                  & PVTv2-B2 & ImageNet & 88.19 & 84.59 & 88.84 & 94.70 & 91.22 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 89.35 & 85.70 & 90.37 & 93.77 & 91.83 \\
-                                  & PVTv2-B2 & CATMuS & 89.22 & 85.88 & 88.98 & 95.75 & 91.86 \\
-                                  & ViT-Small & Random & 87.66 & 85.68 & 89.30 & 95.54 & 91.96 \\
-                                  & ViT-Small & ImageNet & 85.93 & 82.33 & 85.47 & 95.08 & 89.58 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 87.08 & 82.89 & 87.75 & 93.33 & 90.08 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 84.79 & 82.23 & 85.44 & 95.54 & 89.49 \\
-                                  & ViT-Small & CATMuS & 91.57 & 88.25 & 91.25 & 96.23 & 93.40 \\
-        \midrule
-        \multicolumn{3}{@{}l}{Mask R-CNN~\cite{signals3030032}} & 96.44 & 96.22 & 95.06 & 63.30 & 76.60 \\
-        \multicolumn{3}{@{}l}{Mask R-CNN+~\cite{signals3030032}} & \textbf{98.30} & 97.02 & \textbf{97.15} & \textbf{97.75} & \textbf{97.43} \\
-        \multicolumn{3}{@{}l}{APAU-Net (20 training pages)~\cite{Beghoura2026-dp}} & 75.55 & \textbf{97.62} & 63.84 & 49.37 & 54.94 \\
+        \multicolumn{7}{@{}l}{Mask R-CNN~\cite{signals3030032}} & 96.44 & 96.22 & 95.06 & 63.30 & 75.74 \\
+        \multicolumn{7}{@{}l}{Mask R-CNN+~\cite{signals3030032}} & \textbf{98.30} & 97.02 & \textbf{97.15} & \textbf{97.75} & \textbf{97.43} \\
+        \multicolumn{7}{@{}l}{APAU-Net (20 training pages)~\cite{Beghoura2026-dp}} & 75.55 & \textbf{97.62} & 63.84 & 49.37 & 54.94 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -272,77 +397,59 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{Mask R-CNN results per U-DIADS-TL subset.}
     \label{tab:rq1-maskrcnn-fm}\label{tab:rq1-maskrcnn-udiads-subsets}\label{tab:rq1-maskrcnn-udiads-average}
-    \renewcommand{\arraystretch}{0.90}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Backbone & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{Latin14396} & \multicolumn{5}{c}{Latin2} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{Latin14396}& ConvNeXt-Tiny & Random & 82.81 & 92.37 & 81.08 & 86.18 & 83.48 \\
-                                  & ConvNeXt-Tiny & ImageNet & \textbf{87.79} & 97.07 & 94.68 & 95.84 & 95.24 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 87.41 & 96.45 & 95.21 & 95.51 & 95.35 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 87.63 & 97.56 & 91.51 & 96.56 & 93.92 \\
-                                  & ConvNeXt-Tiny & CATMuS & 87.53 & 97.18 & \textbf{95.78} & 95.48 & 95.62 \\
-                                  & PVTv2-B2 & Random & 86.57 & 96.39 & 88.54 & 95.69 & 91.87 \\
-                                  & PVTv2-B2 & ImageNet & 87.29 & 96.94 & 94.09 & 95.95 & 95.00 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 87.50 & 96.88 & 93.48 & 96.15 & 94.77 \\
-                                  & PVTv2-B2 & CATMuS & 87.58 & 97.40 & 94.93 & 97.06 & \textbf{95.97} \\
-                                  & ViT-Small & Random & 86.27 & 95.75 & 87.22 & 94.41 & 90.62 \\
-                                  & ViT-Small & ImageNet & 87.41 & 97.12 & 92.52 & 96.98 & 94.69 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 87.27 & 97.22 & 93.39 & 96.81 & 95.06 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 87.06 & \textbf{97.78} & 91.25 & \textbf{97.24} & 94.12 \\
-                                  & ViT-Small & CATMuS & 87.62 & 97.16 & 94.22 & 95.82 & 95.00 \\
+        ConvNeXt-Tiny & Random & 82.81 & 92.37 & 81.08 & 86.18 & 83.48 & 81.02 & 92.85 & 72.47 & 88.30 & 78.90 \\
+         & ImageNet & \textbf{87.79} & 97.07 & 94.68 & 95.84 & 95.24 & 85.75 & 97.40 & \textbf{93.61} & 93.62 & 93.60 \\
+         & DINOv3 (LVD-1689M) & 87.41 & 96.45 & 95.21 & 95.51 & 95.35 & 85.63 & 97.27 & 91.21 & 93.34 & 92.22 \\
+         & DINOv3 (cBAD) & 87.63 & 97.56 & 91.51 & 96.56 & 93.92 & 84.91 & 96.47 & 88.92 & 93.38 & 91.04 \\
+         & CATMuS & 87.53 & 97.18 & \textbf{95.78} & 95.48 & 95.62 & 85.90 & 97.85 & 92.50 & 95.32 & \textbf{93.87} \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 86.57 & 96.39 & 88.54 & 95.69 & 91.87 & 84.73 & 97.23 & 82.11 & \textbf{95.50} & 87.81 \\
+         & ImageNet & 87.29 & 96.94 & 94.09 & 95.95 & 95.00 & \textbf{86.32} & 97.54 & 90.88 & 93.61 & 92.18 \\
+         & DINOv3 (cBAD) & 87.50 & 96.88 & 93.48 & 96.15 & 94.77 & 85.90 & 96.76 & 91.27 & 93.84 & 92.52 \\
+         & CATMuS & 87.58 & 97.40 & 94.93 & 97.06 & \textbf{95.97} & 85.92 & 97.28 & 93.01 & 93.84 & 93.40 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 86.27 & 95.75 & 87.22 & 94.41 & 90.62 & 86.02 & \textbf{98.05} & 78.16 & 95.46 & 85.30 \\
+         & ImageNet & 87.41 & 97.12 & 92.52 & 96.98 & 94.69 & 84.98 & 96.56 & 89.92 & 91.92 & 90.87 \\
+         & DINOv3 (LVD-1689M) & 87.27 & 97.22 & 93.39 & 96.81 & 95.06 & 86.08 & 95.88 & 73.83 & 93.58 & 82.07 \\
+         & DINOv3 (cBAD) & 87.06 & \textbf{97.78} & 91.25 & \textbf{97.24} & 94.12 & 84.44 & 96.39 & 85.60 & 92.60 & 88.88 \\
+         & CATMuS & 87.62 & 97.16 & 94.22 & 95.82 & 95.00 & 86.14 & 97.03 & 91.59 & 94.87 & 93.16 \\
         \midrule
-        \multirow{14}{*}{Latin2}  & ConvNeXt-Tiny & Random & 81.02 & 92.85 & 72.47 & 88.30 & 78.90 \\
-                                  & ConvNeXt-Tiny & ImageNet & 85.75 & 97.40 & \textbf{93.61} & 93.62 & 93.60 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 85.63 & 97.27 & 91.21 & 93.34 & 92.22 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 84.91 & 96.47 & 88.92 & 93.38 & 91.04 \\
-                                  & ConvNeXt-Tiny & CATMuS & 85.90 & 97.85 & 92.50 & 95.32 & \textbf{93.87} \\
-                                  & PVTv2-B2 & Random & 84.73 & 97.23 & 82.11 & \textbf{95.50} & 87.81 \\
-                                  & PVTv2-B2 & ImageNet & \textbf{86.32} & 97.54 & 90.88 & 93.61 & 92.18 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 85.90 & 96.76 & 91.27 & 93.84 & 92.52 \\
-                                  & PVTv2-B2 & CATMuS & 85.92 & 97.28 & 93.01 & 93.84 & 93.40 \\
-                                  & ViT-Small & Random & 86.02 & \textbf{98.05} & 78.16 & 95.46 & 85.30 \\
-                                  & ViT-Small & ImageNet & 84.98 & 96.56 & 89.92 & 91.92 & 90.87 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 86.08 & 95.88 & 73.83 & 93.58 & 82.07 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 84.44 & 96.39 & 85.60 & 92.60 & 88.88 \\
-                                  & ViT-Small & CATMuS & 86.14 & 97.03 & 91.59 & 94.87 & 93.16 \\
+        & & \multicolumn{5}{c}{Syr341} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{Syr341}  & ConvNeXt-Tiny & Random & 76.78 & 91.62 & 68.29 & 75.30 & 71.61 \\
-                                  & ConvNeXt-Tiny & ImageNet & 80.47 & 96.79 & 85.45 & 88.15 & 86.77 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 80.37 & 96.70 & \textbf{86.15} & 88.58 & \textbf{87.34} \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 79.70 & 95.94 & 83.77 & 87.75 & 85.71 \\
-                                  & ConvNeXt-Tiny & CATMuS & 80.09 & 96.60 & 84.95 & 88.34 & 86.61 \\
-                                  & PVTv2-B2 & Random & 79.40 & 96.03 & 82.29 & 88.04 & 85.07 \\
-                                  & PVTv2-B2 & ImageNet & \textbf{80.49} & 96.67 & 85.68 & 88.24 & 86.94 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 79.94 & 95.94 & 84.30 & 87.27 & 85.75 \\
-                                  & PVTv2-B2 & CATMuS & 80.14 & \textbf{96.90} & 84.52 & 87.41 & 85.94 \\
-                                  & ViT-Small & Random & 79.29 & 95.80 & 80.62 & 87.69 & 84.00 \\
-                                  & ViT-Small & ImageNet & 79.23 & 95.28 & 82.61 & 86.88 & 84.69 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 80.31 & 96.86 & 85.09 & 88.86 & 86.93 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 79.78 & 96.54 & 82.56 & \textbf{88.89} & 85.61 \\
-                                  & ViT-Small & CATMuS & 79.87 & 96.11 & 82.93 & 88.01 & 85.39 \\
+        ConvNeXt-Tiny & Random & 76.78 & 91.62 & 68.29 & 75.30 & 71.61 & 80.20 & 92.28 & 73.95 & 83.26 & 78.00 \\
+         & ImageNet & 80.47 & 96.79 & 85.45 & 88.15 & 86.77 & 84.67 & 97.09 & \textbf{91.25} & 92.54 & 91.87 \\
+         & DINOv3 (LVD-1689M) & 80.37 & 96.70 & \textbf{86.15} & 88.58 & \textbf{87.34} & 84.47 & 96.80 & 90.86 & 92.48 & 91.64 \\
+         & DINOv3 (cBAD) & 79.70 & 95.94 & 83.77 & 87.75 & 85.71 & 84.08 & 96.66 & 88.07 & 92.56 & 90.22 \\
+         & CATMuS & 80.09 & 96.60 & 84.95 & 88.34 & 86.61 & 84.51 & \textbf{97.21} & 91.08 & 93.05 & \textbf{92.03} \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 79.40 & 96.03 & 82.29 & 88.04 & 85.07 & 83.56 & 96.55 & 84.31 & \textbf{93.08} & 88.25 \\
+         & ImageNet & \textbf{80.49} & 96.67 & 85.68 & 88.24 & 86.94 & \textbf{84.70} & 97.05 & 90.22 & 92.60 & 91.37 \\
+         & DINOv3 (cBAD) & 79.94 & 95.94 & 84.30 & 87.27 & 85.75 & 84.45 & 96.53 & 89.68 & 92.42 & 91.01 \\
+         & CATMuS & 80.14 & \textbf{96.90} & 84.52 & 87.41 & 85.94 & 84.55 & 97.19 & 90.82 & 92.77 & 91.77 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 79.29 & 95.80 & 80.62 & 87.69 & 84.00 & 83.86 & 96.53 & 82.00 & 92.52 & 86.64 \\
+         & ImageNet & 79.23 & 95.28 & 82.61 & 86.88 & 84.69 & 83.88 & 96.32 & 88.35 & 91.93 & 90.08 \\
+         & DINOv3 (LVD-1689M) & 80.31 & 96.86 & 85.09 & 88.86 & 86.93 & 84.55 & 96.65 & 84.10 & \textbf{93.08} & 88.02 \\
+         & DINOv3 (cBAD) & 79.78 & 96.54 & 82.56 & \textbf{88.89} & 85.61 & 83.76 & 96.90 & 86.47 & 92.91 & 89.54 \\
+         & CATMuS & 79.87 & 96.11 & 82.93 & 88.01 & 85.39 & 84.54 & 96.77 & 89.58 & 92.90 & 91.18 \\
         \midrule
-        \multirow{14}{*}{Mean}    & ConvNeXt-Tiny & Random & 80.20 & 92.28 & 73.95 & 83.26 & 78.00 \\
-                                  & ConvNeXt-Tiny & ImageNet & 84.67 & 97.09 & \textbf{91.25} & 92.54 & 91.87 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 84.47 & 96.80 & 90.86 & 92.48 & 91.64 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 84.08 & 96.66 & 88.07 & 92.56 & 90.22 \\
-                                  & ConvNeXt-Tiny & CATMuS & 84.51 & \textbf{97.21} & 91.08 & 93.05 & \textbf{92.03} \\
-                                  & PVTv2-B2 & Random & 83.56 & 96.55 & 84.31 & \textbf{93.08} & 88.25 \\
-                                  & PVTv2-B2 & ImageNet & \textbf{84.70} & 97.05 & 90.22 & 92.60 & 91.37 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 84.45 & 96.53 & 89.68 & 92.42 & 91.01 \\
-                                  & PVTv2-B2 & CATMuS & 84.55 & 97.19 & 90.82 & 92.77 & 91.77 \\
-                                  & ViT-Small & Random & 83.86 & 96.53 & 82.00 & 92.52 & 86.64 \\
-                                  & ViT-Small & ImageNet & 83.88 & 96.32 & 88.35 & 91.93 & 90.08 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 84.55 & 96.65 & 84.10 & \textbf{93.08} & 88.02 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 83.76 & 96.90 & 86.47 & 92.91 & 89.54 \\
-                                  & ViT-Small & CATMuS & 84.54 & 96.77 & 89.58 & 92.90 & 91.18 \\
-        \midrule
-        \multicolumn{3}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & 96.10 & 81.50 & 84.90 & 83.00 \\
-        \multicolumn{3}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
-        \multicolumn{3}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & 83.72 & 94.27 & 87.69 & 50.28 & 63.35 \\
+        \multicolumn{7}{@{}l}{PERO (FEST 2025)~\cite{Zottin_2025_FEST}} & 80.30 & 96.10 & 81.50 & 84.90 & 83.00 \\
+        \multicolumn{7}{@{}l}{Connectivity-Aware U-Net++~\cite{sterzinger2025fewshot}} & 70.64 & 77.38 & 73.90 & 52.96 & 61.40 \\
+        \multicolumn{7}{@{}l}{APAU-Net~\cite{Beghoura2026-dp}} & 83.72 & 94.27 & 87.69 & 50.28 & 63.35 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -350,77 +457,59 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{Mask R-CNN results per DIVA-HisDB subset.}
     \label{tab:rq1-maskrcnn-diva-subsets}\label{tab:rq1-maskrcnn-diva-average}
-    \renewcommand{\arraystretch}{0.88}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Subset & Backbone & Initialization & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{CB55} & \multicolumn{5}{c}{CS18} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{CB55}    & ConvNeXt-Tiny & Random & 80.48 & 88.17 & 88.76 & 99.32 & 93.47 \\
-                                  & ConvNeXt-Tiny & ImageNet & 85.67 & 94.42 & \textbf{98.77} & 95.57 & 97.09 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 86.68 & 97.81 & \textbf{98.77} & 99.04 & 98.87 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 85.24 & 96.86 & 98.44 & 98.41 & 98.39 \\
-                                  & ConvNeXt-Tiny & CATMuS & 85.25 & 96.80 & 96.80 & \textbf{100.00} & 98.36 \\
-                                  & PVTv2-B2 & Random & 80.39 & 88.10 & 89.47 & 98.23 & 93.50 \\
-                                  & PVTv2-B2 & ImageNet & \textbf{87.67} & \textbf{98.14} & 98.45 & 99.68 & \textbf{99.04} \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 85.32 & 95.30 & 98.10 & 97.16 & 97.58 \\
-                                  & PVTv2-B2 & CATMuS & 87.32 & 97.88 & \textbf{98.77} & 99.05 & 98.89 \\
-                                  & ViT-Small & Random & 76.83 & 70.19 & 70.88 & 98.67 & 81.85 \\
-                                  & ViT-Small & ImageNet & 78.38 & 82.15 & 82.37 & 99.56 & 89.70 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 75.75 & 66.06 & 66.27 & 99.54 & 77.92 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 78.86 & 82.07 & 82.62 & 99.24 & 90.01 \\
-                                  & ViT-Small & CATMuS & 83.76 & 95.73 & 96.06 & 99.68 & 97.76 \\
+        ConvNeXt-Tiny & Random & 80.48 & 88.17 & 88.76 & 99.32 & 93.47 & 89.25 & 95.72 & 99.26 & 96.41 & 97.72 \\
+         & ImageNet & 85.67 & 94.42 & \textbf{98.77} & 95.57 & 97.09 & 93.27 & 97.81 & 98.52 & 99.29 & 98.88 \\
+         & DINOv3 (LVD-1689M) & 86.68 & 97.81 & \textbf{98.77} & 99.04 & 98.87 & 93.10 & 98.23 & 98.89 & 99.29 & 99.08 \\
+         & DINOv3 (cBAD) & 85.24 & 96.86 & 98.44 & 98.41 & 98.39 & 92.28 & 98.16 & 98.52 & \textbf{99.64} & 99.06 \\
+         & CATMuS & 85.25 & 96.80 & 96.80 & \textbf{100.00} & 98.36 & 92.14 & 95.95 & \textbf{99.63} & 96.27 & 97.87 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 80.39 & 88.10 & 89.47 & 98.23 & 93.50 & 92.34 & \textbf{98.90} & \textbf{99.63} & 99.27 & \textbf{99.44} \\
+         & ImageNet & \textbf{87.67} & \textbf{98.14} & 98.45 & 99.68 & \textbf{99.04} & 90.81 & 96.71 & 97.41 & 99.27 & 98.30 \\
+         & DINOv3 (cBAD) & 85.32 & 95.30 & 98.10 & 97.16 & 97.58 & 92.29 & 97.46 & 98.52 & 98.89 & 98.69 \\
+         & CATMuS & 87.32 & 97.88 & \textbf{98.77} & 99.05 & 98.89 & \textbf{93.74} & 97.19 & 99.26 & 97.90 & 98.54 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 76.83 & 70.19 & 70.88 & 98.67 & 81.85 & 86.29 & 94.68 & 96.30 & 98.32 & 97.20 \\
+         & ImageNet & 78.38 & 82.15 & 82.37 & 99.56 & 89.70 & 88.60 & 96.71 & 97.41 & 99.25 & 98.30 \\
+         & DINOv3 (LVD-1689M) & 75.75 & 66.06 & 66.27 & 99.54 & 77.92 & 81.80 & 80.90 & 82.22 & 97.68 & 89.07 \\
+         & DINOv3 (cBAD) & 78.86 & 82.07 & 82.62 & 99.24 & 90.01 & 89.25 & 95.64 & 97.04 & 98.52 & 97.75 \\
+         & CATMuS & 83.76 & 95.73 & 96.06 & 99.68 & 97.76 & 90.17 & 94.42 & 98.15 & 96.10 & 97.08 \\
         \midrule
-        \multirow{14}{*}{CS18}    & ConvNeXt-Tiny & Random & 89.25 & 95.72 & 99.26 & 96.41 & 97.72 \\
-                                  & ConvNeXt-Tiny & ImageNet & 93.27 & 97.81 & 98.52 & 99.29 & 98.88 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 93.10 & 98.23 & 98.89 & 99.29 & 99.08 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 92.28 & 98.16 & 98.52 & \textbf{99.64} & 99.06 \\
-                                  & ConvNeXt-Tiny & CATMuS & 92.14 & 95.95 & \textbf{99.63} & 96.27 & 97.87 \\
-                                  & PVTv2-B2 & Random & 92.34 & \textbf{98.90} & \textbf{99.63} & 99.27 & \textbf{99.44} \\
-                                  & PVTv2-B2 & ImageNet & 90.81 & 96.71 & 97.41 & 99.27 & 98.30 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 92.29 & 97.46 & 98.52 & 98.89 & 98.69 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{93.74} & 97.19 & 99.26 & 97.90 & 98.54 \\
-                                  & ViT-Small & Random & 86.29 & 94.68 & 96.30 & 98.32 & 97.20 \\
-                                  & ViT-Small & ImageNet & 88.60 & 96.71 & 97.41 & 99.25 & 98.30 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 81.80 & 80.90 & 82.22 & 97.68 & 89.07 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 89.25 & 95.64 & 97.04 & 98.52 & 97.75 \\
-                                  & ViT-Small & CATMuS & 90.17 & 94.42 & 98.15 & 96.10 & 97.08 \\
+        & & \multicolumn{5}{c}{CS863} & \multicolumn{5}{c}{Mean} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Backbone & Initialization & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        \multirow{14}{*}{CS863}   & ConvNeXt-Tiny & Random & 80.09 & 87.76 & 89.61 & 95.74 & 92.33 \\
-                                  & ConvNeXt-Tiny & ImageNet & 88.11 & 98.68 & 98.68 & \textbf{100.00} & 99.33 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 88.20 & 99.34 & 99.34 & \textbf{100.00} & 99.67 \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 88.25 & 98.37 & 98.37 & \textbf{100.00} & 99.16 \\
-                                  & ConvNeXt-Tiny & CATMuS & 89.43 & 99.03 & 99.03 & \textbf{100.00} & 99.50 \\
-                                  & PVTv2-B2 & Random & 84.21 & 96.12 & 96.43 & 99.69 & 97.95 \\
-                                  & PVTv2-B2 & ImageNet & 89.47 & 99.02 & 99.02 & \textbf{100.00} & 99.50 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 88.09 & 98.74 & 99.67 & 99.07 & 99.36 \\
-                                  & PVTv2-B2 & CATMuS & \textbf{89.83} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} \\
-                                  & ViT-Small & Random & 78.09 & 87.71 & 90.51 & 96.33 & 93.27 \\
-                                  & ViT-Small & ImageNet & 80.33 & 92.20 & 93.39 & 98.68 & 95.86 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 81.93 & 95.42 & 95.73 & 99.67 & 97.60 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 83.77 & 97.09 & 97.40 & 99.69 & 98.47 \\
-                                  & ViT-Small & CATMuS & 85.48 & 95.15 & 95.75 & 99.35 & 97.47 \\
+        ConvNeXt-Tiny & Random & 80.09 & 87.76 & 89.61 & 95.74 & 92.33 & 83.27 & 90.55 & 92.55 & 97.16 & 94.51 \\
+         & ImageNet & 88.11 & 98.68 & 98.68 & \textbf{100.00} & 99.33 & 89.01 & 96.97 & 98.65 & 98.29 & 98.43 \\
+         & DINOv3 (LVD-1689M) & 88.20 & 99.34 & 99.34 & \textbf{100.00} & 99.67 & 89.33 & \textbf{98.46} & 99.00 & 99.44 & \textbf{99.21} \\
+         & DINOv3 (cBAD) & 88.25 & 98.37 & 98.37 & \textbf{100.00} & 99.16 & 88.59 & 97.80 & 98.44 & 99.35 & 98.87 \\
+         & CATMuS & 89.43 & 99.03 & 99.03 & \textbf{100.00} & 99.50 & 88.94 & 97.26 & 98.49 & 98.76 & 98.58 \\
+        \addlinespace[1pt]
+        PVTv2-B2 & Random & 84.21 & 96.12 & 96.43 & 99.69 & 97.95 & 85.65 & 94.37 & 95.18 & 99.06 & 96.97 \\
+         & ImageNet & 89.47 & 99.02 & 99.02 & \textbf{100.00} & 99.50 & 89.32 & 97.96 & 98.29 & \textbf{99.65} & 98.95 \\
+         & DINOv3 (cBAD) & 88.09 & 98.74 & 99.67 & 99.07 & 99.36 & 88.57 & 97.17 & 98.76 & 98.37 & 98.54 \\
+         & CATMuS & \textbf{89.83} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & \textbf{100.00} & 90.30 & 98.35 & \textbf{99.34} & 98.98 & 99.14 \\
+        \addlinespace[1pt]
+        ViT-Small & Random & 78.09 & 87.71 & 90.51 & 96.33 & 93.27 & 80.40 & 84.19 & 85.90 & 97.78 & 90.77 \\
+         & ImageNet & 80.33 & 92.20 & 93.39 & 98.68 & 95.86 & 82.44 & 90.35 & 91.06 & 99.16 & 94.62 \\
+         & DINOv3 (LVD-1689M) & 81.93 & 95.42 & 95.73 & 99.67 & 97.60 & 79.83 & 80.79 & 81.41 & 98.96 & 88.20 \\
+         & DINOv3 (cBAD) & 83.77 & 97.09 & 97.40 & 99.69 & 98.47 & 83.96 & 91.60 & 92.35 & 99.15 & 95.41 \\
+         & CATMuS & 85.48 & 95.15 & 95.75 & 99.35 & 97.47 & 86.47 & 95.10 & 96.65 & 98.38 & 97.43 \\
         \midrule
-        \multirow{14}{*}{Mean}    & ConvNeXt-Tiny & Random & 83.27 & 90.55 & 92.55 & 97.16 & 94.51 \\
-                                  & ConvNeXt-Tiny & ImageNet & 89.01 & 96.97 & 98.65 & 98.29 & 98.43 \\
-                                  & ConvNeXt-Tiny & DINOv3 (LVD-1689M) & 89.33 & \textbf{98.46} & 99.00 & 99.44 & \textbf{99.21} \\
-                                  & ConvNeXt-Tiny & DINOv3 (cBAD) & 88.59 & 97.80 & 98.44 & 99.35 & 98.87 \\
-                                  & ConvNeXt-Tiny & CATMuS & 88.94 & 97.26 & 98.49 & 98.76 & 98.58 \\
-                                  & PVTv2-B2 & Random & 85.65 & 94.37 & 95.18 & 99.06 & 96.97 \\
-                                  & PVTv2-B2 & ImageNet & 89.32 & 97.96 & 98.29 & \textbf{99.65} & 98.95 \\
-                                  & PVTv2-B2 & DINOv3 (cBAD) & 88.57 & 97.17 & 98.76 & 98.37 & 98.54 \\
-                                  & PVTv2-B2 & CATMuS & 90.30 & 98.35 & \textbf{99.34} & 98.98 & 99.14 \\
-                                  & ViT-Small & Random & 80.40 & 84.19 & 85.90 & 97.78 & 90.77 \\
-                                  & ViT-Small & ImageNet & 82.44 & 90.35 & 91.06 & 99.16 & 94.62 \\
-                                  & ViT-Small & DINOv3 (LVD-1689M) & 79.83 & 80.79 & 81.41 & 98.96 & 88.20 \\
-                                  & ViT-Small & DINOv3 (cBAD) & 83.96 & 91.60 & 92.35 & 99.15 & 95.41 \\
-                                  & ViT-Small & CATMuS & 86.47 & 95.10 & 96.65 & 98.38 & 97.43 \\
-        \midrule
-        \multicolumn{3}{@{}l}{Mask R-CNN~\cite{signals3030032}} & 96.44 & 96.22 & 95.06 & 63.30 & 76.60 \\
-        \multicolumn{3}{@{}l}{Mask R-CNN+~\cite{signals3030032}} & \textbf{98.30} & 97.02 & 97.15 & 97.75 & 97.43 \\
-        \multicolumn{3}{@{}l}{APAU-Net (20 training pages)~\cite{Beghoura2026-dp}} & 75.55 & 97.62 & 63.84 & 49.37 & 54.94 \\
+        \multicolumn{7}{@{}l}{Mask R-CNN~\cite{signals3030032}} & 96.44 & 96.22 & 95.06 & 63.30 & 75.74 \\
+        \multicolumn{7}{@{}l}{Mask R-CNN+~\cite{signals3030032}} & \textbf{98.30} & 97.02 & 97.15 & 97.75 & 97.43 \\
+        \multicolumn{7}{@{}l}{APAU-Net (20 training pages)~\cite{Beghoura2026-dp}} & 75.55 & 97.62 & 63.84 & 49.37 & 54.94 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -429,62 +518,43 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
     \centering
     \scriptsize
     \setlength{\tabcolsep}{2pt}
-    \caption{U-Net results by factor, pooled over both benchmarks.}
-    \label{tab:rq1-unet-grouped}
+    \renewcommand{\arraystretch}{0.92}
+    \caption{Results of the three pipelines by factor, pooled over both benchmarks (mean \(\pm\) standard deviation).}
+    \label{tab:rq1-unet-grouped}\label{tab:rq1-rtdetr-grouped}\label{tab:rq1-maskrcnn-grouped}
     \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llcccccc@{}}
         \toprule
         Factor & Group & \(n\) & Pixel IU & Line IU & DR & RA & FM \\
+        \midrule
+        \multicolumn{8}{@{}l}{\emph{U-Net}} \\
         \midrule
         Initialization & Random             & 6 & 81.91\,\(\pm\)\,3.75 & 88.93\,\(\pm\)\,5.17 & 85.69\,\(\pm\)\,3.77 & 85.18\,\(\pm\)\,6.80 & 85.32\,\(\pm\)\,5.33 \\
                        & ImageNet           & 6 & \textbf{84.09}\,\(\pm\)\,5.13 & \textbf{91.50}\,\(\pm\)\,3.41 & \textbf{89.21}\,\(\pm\)\,3.70 & 90.39\,\(\pm\)\,4.97 & \textbf{89.67}\,\(\pm\)\,4.17 \\
                        & DINOv3 (LVD-1689M) & 4 & 83.70\,\(\pm\)\,5.62 & 91.46\,\(\pm\)\,5.15 & 88.24\,\(\pm\)\,4.14 & \textbf{91.02}\,\(\pm\)\,5.28 & 89.50\,\(\pm\)\,4.58 \\
-        \midrule
+        \addlinespace[1pt]
         Backbone       & ConvNeXt           & 6 & \textbf{84.27}\,\(\pm\)\,6.12 & \textbf{92.04}\,\(\pm\)\,2.69 & \textbf{88.77}\,\(\pm\)\,4.85 & \textbf{89.93}\,\(\pm\)\,7.31 & \textbf{89.25}\,\(\pm\)\,6.07 \\
                        & PVTv2              & 4 & 82.61\,\(\pm\)\,4.56 & 89.41\,\(\pm\)\,5.20 & 86.41\,\(\pm\)\,3.51 & 87.33\,\(\pm\)\,7.30 & 86.76\,\(\pm\)\,5.44 \\
                        & ViT                & 6 & 82.46\,\(\pm\)\,3.19 & 89.75\,\(\pm\)\,5.59 & 87.35\,\(\pm\)\,3.50 & 88.09\,\(\pm\)\,4.60 & 87.56\,\(\pm\)\,3.75 \\
-        \bottomrule
-    \end{tabular*}
-\end{table}
-
-\begin{table}[htbp]
-    \centering
-    \scriptsize
-    \setlength{\tabcolsep}{2pt}
-    \caption{RT-DETR + BBox U-Net results by factor, pooled over both benchmarks.}
-    \label{tab:rq1-rtdetr-grouped}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llcccccc@{}}
-        \toprule
-        Factor & Group & \(n\) & Pixel IU & Line IU & DR & RA & FM \\
         \midrule
-        Initialization & Random             & 6 & 78.87\,\(\pm\)\,9.09 & 77.19\,\(\pm\)\,14.05 & 65.52\,\(\pm\)\,23.88 & 73.18\,\(\pm\)\,27.34 & 68.42\,\(\pm\)\,25.44 \\
-                       & ImageNet           & 6 & 84.95\,\(\pm\)\,3.12 & 89.00\,\(\pm\)\,5.87 & 82.78\,\(\pm\)\,6.25 & 87.31\,\(\pm\)\,9.81 & 84.43\,\(\pm\)\,8.21 \\
-                       & DINOv3 (LVD-1689M) & 4 & 79.27\,\(\pm\)\,8.91 & 78.78\,\(\pm\)\,14.79 & 73.83\,\(\pm\)\,20.16 & 76.80\,\(\pm\)\,24.42 & 74.10\,\(\pm\)\,21.73 \\
-                       & DINOv3 (cBAD)      & 6 & 80.55\,\(\pm\)\,6.71 & 84.67\,\(\pm\)\,2.43 & 79.93\,\(\pm\)\,8.42 & 81.95\,\(\pm\)\,13.63 & 80.30\,\(\pm\)\,10.88 \\
-                       & CATMuS             & 6 & \textbf{87.70}\,\(\pm\)\,3.51 & \textbf{92.18}\,\(\pm\)\,5.22 & \textbf{90.46}\,\(\pm\)\,1.34 & \textbf{93.33}\,\(\pm\)\,2.46 & \textbf{91.70}\,\(\pm\)\,1.40 \\
+        \multicolumn{8}{@{}l}{\emph{RT-DETR + BBox U-Net}} \\
         \midrule
-        Backbone       & ConvNeXt           & 10 & 79.85\,\(\pm\)\,9.04 & 80.57\,\(\pm\)\,13.73 & 75.40\,\(\pm\)\,19.67 & 79.50\,\(\pm\)\,23.84 & 76.74\,\(\pm\)\,21.71 \\
-                       & PVTv2              & 8 & \textbf{84.76}\,\(\pm\)\,4.16 & \textbf{88.67}\,\(\pm\)\,5.89 & \textbf{81.38}\,\(\pm\)\,12.45 & \textbf{86.51}\,\(\pm\)\,10.99 & \textbf{83.27}\,\(\pm\)\,11.61 \\
-                       & ViT                & 10 & 83.29\,\(\pm\)\,6.27 & 85.82\,\(\pm\)\,8.56 & 80.24\,\(\pm\)\,14.72 & 83.47\,\(\pm\)\,15.89 & 81.19\,\(\pm\)\,15.22 \\
-        \bottomrule
-    \end{tabular*}
-\end{table}
-
-\begin{table}[htbp]
-    \centering
-    \scriptsize
-    \setlength{\tabcolsep}{2pt}
-    \caption{Mask R-CNN results by factor, pooled over both benchmarks.}
-    \label{tab:rq1-maskrcnn-grouped}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llcccccc@{}}
-        \toprule
-        Factor & Group & \(n\) & Pixel IU & Line IU & DR & RA & FM \\
+        Initialization & Random & 6 & 79.28\,\(\pm\)\,9.48 & 77.60\,\(\pm\)\,14.27 & 65.92\,\(\pm\)\,24.29 & 73.20\,\(\pm\)\,27.36 & 68.66\,\(\pm\)\,25.69 \\
+                        & ImageNet & 6 & 84.47\,\(\pm\)\,2.69 & 88.58\,\(\pm\)\,6.31 & 82.28\,\(\pm\)\,5.82 & 87.41\,\(\pm\)\,9.91 & 84.18\,\(\pm\)\,7.98 \\
+                        & DINOv3 (LVD-1689M) & 4 & 80.83\,\(\pm\)\,9.67 & 80.22\,\(\pm\)\,14.93 & 75.86\,\(\pm\)\,21.46 & 76.27\,\(\pm\)\,23.92 & 75.42\,\(\pm\)\,22.76 \\
+                        & DINOv3 (cBAD) & 6 & 80.56\,\(\pm\)\,6.71 & 84.67\,\(\pm\)\,2.43 & 79.93\,\(\pm\)\,8.42 & 81.95\,\(\pm\)\,13.63 & 80.30\,\(\pm\)\,10.88 \\
+                        & CATMuS & 6 & \textbf{86.57}\,\(\pm\)\,2.18 & \textbf{90.86}\,\(\pm\)\,6.72 & \textbf{89.69}\,\(\pm\)\,0.82 & \textbf{92.91}\,\(\pm\)\,1.04 & \textbf{90.98}\,\(\pm\)\,0.73 \\
+        \addlinespace[1pt]
+        Backbone & ConvNeXt & 10 & 80.14\,\(\pm\)\,8.87 & 80.82\,\(\pm\)\,13.56 & 75.81\,\(\pm\)\,19.75 & 79.27\,\(\pm\)\,23.69 & 77.02\,\(\pm\)\,21.81 \\
+                        & PVTv2 & 8 & \textbf{84.57}\,\(\pm\)\,4.00 & \textbf{88.49}\,\(\pm\)\,6.06 & \textbf{81.28}\,\(\pm\)\,12.37 & \textbf{86.58}\,\(\pm\)\,10.96 & \textbf{83.20}\,\(\pm\)\,11.55 \\
+                        & ViT & 10 & 83.07\,\(\pm\)\,5.97 & 85.50\,\(\pm\)\,8.55 & 80.21\,\(\pm\)\,14.68 & 83.25\,\(\pm\)\,15.71 & 81.06\,\(\pm\)\,15.11 \\
+        \midrule
+        \multicolumn{8}{@{}l}{\emph{Mask R-CNN}} \\
         \midrule
         Initialization & Random             & 6 & 82.82\,\(\pm\)\,2.12 & 92.41\,\(\pm\)\,4.67 & 85.65\,\(\pm\)\,7.62 & 93.81\,\(\pm\)\,5.80 & 89.19\,\(\pm\)\,6.69 \\
                        & ImageNet           & 6 & 85.67\,\(\pm\)\,2.83 & 95.96\,\(\pm\)\,2.80 & 92.97\,\(\pm\)\,4.38 & 95.70\,\(\pm\)\,3.69 & 94.22\,\(\pm\)\,3.77 \\
                        & DINOv3 (LVD-1689M) & 4 & 84.55\,\(\pm\)\,3.88 & 93.17\,\(\pm\)\,8.30 & 88.84\,\(\pm\)\,7.85 & \textbf{95.99}\,\(\pm\)\,3.72 & 91.77\,\(\pm\)\,5.23 \\
                        & DINOv3 (cBAD)      & 6 & 85.57\,\(\pm\)\,2.34 & 96.11\,\(\pm\)\,2.25 & 92.30\,\(\pm\)\,5.26 & 95.79\,\(\pm\)\,3.48 & 93.93\,\(\pm\)\,4.23 \\
                        & CATMuS             & 6 & \textbf{86.55}\,\(\pm\)\,2.53 & \textbf{96.98}\,\(\pm\)\,1.06 & \textbf{94.33}\,\(\pm\)\,4.32 & 95.81\,\(\pm\)\,3.18 & \textbf{95.02}\,\(\pm\)\,3.73 \\
-        \midrule
+        \addlinespace[1pt]
         Backbone       & ConvNeXt           & 10 & 85.71\,\(\pm\)\,3.09 & 96.11\,\(\pm\)\,2.56 & 92.23\,\(\pm\)\,7.61 & 94.69\,\(\pm\)\,5.03 & 93.34\,\(\pm\)\,6.43 \\
                        & PVTv2              & 8 & \textbf{86.39}\,\(\pm\)\,2.60 & \textbf{96.90}\,\(\pm\)\,1.20 & \textbf{93.33}\,\(\pm\)\,5.40 & \textbf{95.87}\,\(\pm\)\,3.39 & \textbf{94.50}\,\(\pm\)\,4.35 \\
                        & ViT                & 10 & 83.37\,\(\pm\)\,1.99 & 92.52\,\(\pm\)\,5.81 & 87.79\,\(\pm\)\,4.79 & 95.68\,\(\pm\)\,3.21 & 91.19\,\(\pm\)\,3.53 \\
@@ -496,7 +566,7 @@ Tables~\ref{tab:rq1-unet-fm}--\ref{tab:rq1-maskrcnn-diva-subsets} give the resul
 \section{Encoder Size}
 \label{app:rq1-size}
 
-The XS, S, and M encoder brackets are compared for U-Net, the RT-DETR + BBox U-Net pipeline, and Mask R-CNN on U-DIADS-TL (Table~\ref{tab:rq1-size-unet}). For U-Net and Mask R-CNN, the M bracket exceeds the XS bracket by 1.63 and 1.49 percentage points of mean \gls{fm}, less than the standard deviation within each bracket. Only the RT-DETR + BBox U-Net pipeline shows a larger difference of 6.14 points.
+Table~\ref{tab:rq1-size-unet} compares the encoder size brackets on U-DIADS-TL.
 
 % Source: 99_evaluation/summaries/rq1/RQ1.1_backbones_unet.csv,
 %         99_evaluation/summaries/rq1/RQ1.2_backbones_2stage.csv
@@ -534,74 +604,53 @@ The XS, S, and M encoder brackets are compared for U-Net, the RT-DETR + BBox U-N
     \end{tabular*}
 \end{table}
 
-\clearpage
 
 \FloatBarrier
 \section{Crop-Loss Study}
 \label{app:rq1-crop-loss}\label{app:rq1-two-stage-loss}\label{app:rq1-maskrcnn-loss}
 
-The BBox U-Net of the second stage is trained with three losses: binary cross-entropy (BCE), the Tversky loss, and the SuperVoxel loss (Section~\ref{sec:training-two-stage}). Table~\ref{tab:rq1-two-stage-loss-study} reports the results for the boxes of the RT-DETR and of the Mask R-CNN detector. Within each subset, the boxes are fixed, so every comparison isolates the segmentation loss.
+Table~\ref{tab:rq1-two-stage-loss-study} compares the three losses of the BBox U-Net on the fixed boxes of both detectors.
 
 \begin{table}[htbp]
     \centering
     \scriptsize
-    \setlength{\tabcolsep}{2pt}
+    \setlength{\tabcolsep}{1.3pt}
+    \renewcommand{\arraystretch}{0.92}
     \caption{Crop-loss study for the boxes of both detectors.}
     \label{tab:rq1-two-stage-loss-study}\label{tab:rq1-two-stage-loss-study-average}\label{tab:rq1-maskrcnn-loss-study}\label{tab:rq1-maskrcnn-loss-study-average}
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llllccccc@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll*{10}{c}@{}}
         \toprule
-        Loss & Dataset & Subset & Detector & Pixel IU & Line IU & DR & RA & FM \\
+        & & \multicolumn{5}{c}{RT-DETR boxes} & \multicolumn{5}{c}{Mask R-CNN boxes} \\
+        \cmidrule(lr){3-7}\cmidrule(l){8-12}
+        & & Pixel & Line & & & & Pixel & Line & & & \\
+        Loss & Subset & IU & IU & DR & RA & FM & IU & IU & DR & RA & FM \\
         \midrule
-        BCE & DIVA-HisDB & CB55 & RT-DETR & 92.26 & 92.57 & 93.72 & 98.53 & 95.93 \\
-         &  &  & Mask R-CNN & 98.58 & 98.10 & 98.10 & \textbf{100.00} & 99.02 \\
-         &  & CS18 & RT-DETR & 90.23 & 86.16 & 90.74 & 94.18 & 92.27 \\
-         &  &  & Mask R-CNN & \textbf{97.83} & 96.34 & 97.04 & 99.25 & 98.10 \\
-         &  & CS863 & RT-DETR & 85.17 & 78.90 & 82.48 & \textbf{94.53} & 87.38 \\
-         &  &  & Mask R-CNN & 90.21 & 80.47 & 80.47 & \textbf{100.00} & 88.79 \\
-        \cmidrule(l){2-9}
-         & U-DIADS-TL & Latin14396 & RT-DETR & 87.80 & 96.52 & 93.94 & 92.13 & 92.97 \\
-         &  &  & Mask R-CNN & 88.08 & 97.44 & 95.98 & 95.22 & 95.58 \\
-         &  & Latin2 & RT-DETR & \textbf{87.00} & \textbf{98.46} & \textbf{91.18} & \textbf{94.60} & \textbf{92.80} \\
-         &  &  & Mask R-CNN & \textbf{86.60} & \textbf{97.53} & \textbf{93.00} & \textbf{94.30} & \textbf{93.64} \\
-         &  & Syr341 & RT-DETR & 80.62 & \textbf{97.73} & 85.24 & 88.56 & 86.86 \\
-         &  &  & Mask R-CNN & 80.61 & \textbf{97.33} & 85.75 & 88.66 & 87.17 \\
-        \cmidrule(l){2-9}
-         & Mean & 6 subsets & RT-DETR & 87.18 & 91.72 & 89.55 & 93.76 & 91.37 \\
-         &  &  & Mask R-CNN & 90.32 & 94.54 & 91.72 & 96.24 & 93.72 \\
+        BCE & CB55 & 92.26 & 92.57 & 93.72 & 98.53 & 95.93 & 98.58 & 98.10 & 98.10 & \textbf{100.00} & 99.02 \\
+         & CS18 & 90.23 & 86.16 & 90.74 & 94.18 & 92.27 & \textbf{97.83} & 96.34 & 97.04 & 99.25 & 98.10 \\
+         & CS863 & 85.17 & 78.90 & 82.48 & \textbf{94.53} & 87.38 & 90.21 & 80.47 & 80.47 & \textbf{100.00} & 88.79 \\
+         & Latin14396 & 87.80 & 96.52 & 93.94 & 92.13 & 92.97 & 88.08 & 97.44 & 95.98 & 95.22 & 95.58 \\
+         & Latin2 & \textbf{87.00} & \textbf{98.46} & \textbf{91.18} & \textbf{94.60} & \textbf{92.80} & \textbf{86.60} & \textbf{97.53} & \textbf{93.00} & \textbf{94.30} & \textbf{93.64} \\
+         & Syr341 & 80.62 & \textbf{97.73} & 85.24 & 88.56 & 86.86 & 80.61 & \textbf{97.33} & 85.75 & 88.66 & 87.17 \\
+        \addlinespace[1pt]
+         & Mean & 87.18 & 91.72 & 89.55 & 93.76 & 91.37 & 90.32 & 94.54 & 91.72 & 96.24 & 93.72 \\
         \midrule
-        Tversky & DIVA-HisDB & CB55 & RT-DETR & 93.09 & 93.00 & 94.14 & \textbf{98.54} & 96.11 \\
-         &  &  & Mask R-CNN & \textbf{98.89} & \textbf{98.77} & \textbf{98.77} & \textbf{100.00} & \textbf{99.36} \\
-         &  & CS18 & RT-DETR & \textbf{90.98} & \textbf{87.40} & \textbf{91.85} & \textbf{94.45} & \textbf{92.98} \\
-         &  &  & Mask R-CNN & 97.55 & \textbf{97.45} & \textbf{97.78} & \textbf{99.62} & \textbf{98.66} \\
-         &  & CS863 & RT-DETR & \textbf{87.58} & \textbf{84.28} & \textbf{88.80} & 93.79 & \textbf{90.84} \\
-         &  &  & Mask R-CNN & \textbf{97.76} & \textbf{98.05} & \textbf{98.05} & \textbf{100.00} & \textbf{99.01} \\
-        \cmidrule(l){2-9}
-         & U-DIADS-TL & Latin14396 & RT-DETR & 86.43 & 96.30 & 94.05 & 92.25 & 93.09 \\
-         &  &  & Mask R-CNN & 87.44 & 97.43 & 95.88 & 95.11 & 95.47 \\
-         &  & Latin2 & RT-DETR & 86.01 & 97.57 & 90.60 & 93.96 & 92.20 \\
-         &  &  & Mask R-CNN & 85.71 & 96.94 & 92.56 & 93.74 & 93.14 \\
-         &  & Syr341 & RT-DETR & 79.30 & 94.50 & 82.57 & 85.78 & 84.14 \\
-         &  &  & Mask R-CNN & 79.10 & 93.42 & 82.46 & 85.27 & 83.84 \\
-        \cmidrule(l){2-9}
-         & Mean & 6 subsets & RT-DETR & \textbf{87.23} & \textbf{92.17} & \textbf{90.34} & 93.13 & \textbf{91.56} \\
-         &  &  & Mask R-CNN & \textbf{91.07} & \textbf{97.01} & \textbf{94.25} & 95.62 & \textbf{94.91} \\
+        Tversky & CB55 & 93.09 & 93.00 & 94.14 & \textbf{98.54} & 96.11 & \textbf{98.89} & \textbf{98.77} & \textbf{98.77} & \textbf{100.00} & \textbf{99.36} \\
+         & CS18 & \textbf{90.98} & \textbf{87.40} & \textbf{91.85} & \textbf{94.45} & \textbf{92.98} & 97.55 & \textbf{97.45} & \textbf{97.78} & \textbf{99.62} & \textbf{98.66} \\
+         & CS863 & \textbf{87.58} & \textbf{84.28} & \textbf{88.80} & 93.79 & \textbf{90.84} & \textbf{97.76} & \textbf{98.05} & \textbf{98.05} & \textbf{100.00} & \textbf{99.01} \\
+         & Latin14396 & 86.43 & 96.30 & 94.05 & 92.25 & 93.09 & 87.44 & 97.43 & 95.88 & 95.11 & 95.47 \\
+         & Latin2 & 86.01 & 97.57 & 90.60 & 93.96 & 92.20 & 85.71 & 96.94 & 92.56 & 93.74 & 93.14 \\
+         & Syr341 & 79.30 & 94.50 & 82.57 & 85.78 & 84.14 & 79.10 & 93.42 & 82.46 & 85.27 & 83.84 \\
+        \addlinespace[1pt]
+         & Mean & \textbf{87.23} & \textbf{92.17} & \textbf{90.34} & 93.13 & \textbf{91.56} & \textbf{91.07} & \textbf{97.01} & \textbf{94.25} & 95.62 & \textbf{94.91} \\
         \midrule
-        SuperVoxel & DIVA-HisDB & CB55 & RT-DETR & \textbf{93.15} & \textbf{93.23} & \textbf{94.38} & \textbf{98.54} & \textbf{96.27} \\
-         &  &  & Mask R-CNN & 98.85 & \textbf{98.77} & \textbf{98.77} & \textbf{100.00} & \textbf{99.36} \\
-         &  & CS18 & RT-DETR & 87.84 & 81.41 & 85.93 & 94.04 & 89.46 \\
-         &  &  & Mask R-CNN & 96.15 & 92.64 & 92.96 & 99.60 & 96.01 \\
-         &  & CS863 & RT-DETR & 81.18 & 70.31 & 73.33 & 93.73 & 81.81 \\
-         &  &  & Mask R-CNN & 90.97 & 84.71 & 84.71 & \textbf{100.00} & 91.59 \\
-        \cmidrule(l){2-9}
-         & U-DIADS-TL & Latin14396 & RT-DETR & \textbf{87.84} & \textbf{97.32} & \textbf{95.23} & \textbf{93.37} & \textbf{94.24} \\
-         &  &  & Mask R-CNN & \textbf{88.12} & \textbf{97.89} & \textbf{96.33} & \textbf{95.56} & \textbf{95.92} \\
-         &  & Latin2 & RT-DETR & 86.80 & 97.91 & 90.87 & 94.27 & 92.48 \\
-         &  &  & Mask R-CNN & 86.04 & 97.06 & 92.50 & 93.71 & 93.09 \\
-         &  & Syr341 & RT-DETR & \textbf{80.80} & 97.47 & \textbf{85.57} & \textbf{88.90} & \textbf{87.20} \\
-         &  &  & Mask R-CNN & \textbf{80.89} & 97.27 & \textbf{86.19} & \textbf{89.11} & \textbf{87.62} \\
-        \cmidrule(l){2-9}
-         & Mean & 6 subsets & RT-DETR & 86.27 & 89.61 & 87.55 & \textbf{93.81} & 90.24 \\
-         &  &  & Mask R-CNN & 90.17 & 94.72 & 91.91 & \textbf{96.33} & 93.93 \\
+        SuperVoxel & CB55 & \textbf{93.15} & \textbf{93.23} & \textbf{94.38} & \textbf{98.54} & \textbf{96.27} & 98.85 & \textbf{98.77} & \textbf{98.77} & \textbf{100.00} & \textbf{99.36} \\
+         & CS18 & 87.84 & 81.41 & 85.93 & 94.04 & 89.46 & 96.15 & 92.64 & 92.96 & 99.60 & 96.01 \\
+         & CS863 & 81.18 & 70.31 & 73.33 & 93.73 & 81.81 & 90.97 & 84.71 & 84.71 & \textbf{100.00} & 91.59 \\
+         & Latin14396 & \textbf{87.84} & \textbf{97.32} & \textbf{95.23} & \textbf{93.37} & \textbf{94.24} & \textbf{88.12} & \textbf{97.89} & \textbf{96.33} & \textbf{95.56} & \textbf{95.92} \\
+         & Latin2 & 86.80 & 97.91 & 90.87 & 94.27 & 92.48 & 86.04 & 97.06 & 92.50 & 93.71 & 93.09 \\
+         & Syr341 & \textbf{80.80} & 97.47 & \textbf{85.57} & \textbf{88.90} & \textbf{87.20} & \textbf{80.89} & 97.27 & \textbf{86.19} & \textbf{89.11} & \textbf{87.62} \\
+        \addlinespace[1pt]
+         & Mean & 86.27 & 89.61 & 87.55 & \textbf{93.81} & 90.24 & 90.17 & 94.72 & 91.91 & \textbf{96.33} & 93.93 \\
         \bottomrule
     \end{tabular*}
 \end{table}
@@ -611,129 +660,128 @@ The BBox U-Net of the second stage is trained with three losses: binary cross-en
 \chapter{Page-Selection Results}
 \label{app:rq2-selection}
 
-This appendix reports the mean DIVA-HisDB line \gls{fm} of every pipeline for each page selection strategy and number of training pages (Section~\ref{sec:results-rq2}).
+Table~\ref{tab:rq2-fm-by-selection} summarizes the page selection methods, and Table~\ref{tab:rq2-unet-random} gives every pipeline and initialization.
 
 \begin{table}[htbp]
     \centering
-    \small
-    \setlength{\tabcolsep}{4pt}
-    \caption{U-Net: mean DIVA-HisDB \gls{fm} by page selection, initialization, and \(k\).}
-    \label{tab:rq2-unet-random}\label{tab:rq2-unet-grayscale}\label{tab:rq2-unet-pca-maxmin}\label{tab:rq2-unet-pca-centroid}\label{tab:rq2-unet-ica-maxmin}\label{tab:rq2-unet-ica-centroid}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \caption{Mean DIVA-HisDB \gls{fm} by page-selection method.}
+    \label{tab:rq2-fm-by-selection}
+    \begin{tabular}{@{}lccccc@{}}
+        \toprule
+        Selection method & \multicolumn{5}{c}{Training pages \(k\)} \\
+        \cmidrule(l){2-6}
+         & 1 & 3 & 5 & 10 & 15 \\
+        \midrule
+        Random & 53.28 \(\pm\) 30.84 & 79.64 \(\pm\) 19.05 & \textbf{91.25} \(\pm\) 4.71 & 91.69 \(\pm\) 6.69 & 91.50 \(\pm\) 8.71 \\
+        Grayscale variance & 52.02 \(\pm\) 27.00 & 79.31 \(\pm\) 17.79 & 87.87 \(\pm\) 9.53 & 87.39 \(\pm\) 10.81 & 93.70 \(\pm\) 4.37 \\
+        PCA max--min & \textbf{54.07} \(\pm\) 27.55 & 84.43 \(\pm\) 15.99 & 90.39 \(\pm\) 5.34 & \textbf{93.19} \(\pm\) 5.88 & 93.78 \(\pm\) 5.04 \\
+        PCA centroid & 51.51 \(\pm\) 26.21 & 77.49 \(\pm\) 21.74 & 86.94 \(\pm\) 8.60 & 91.73 \(\pm\) 7.33 & 94.30 \(\pm\) 3.95 \\
+        ICA max--min & \textbf{54.07} \(\pm\) 27.55 & \textbf{84.48} \(\pm\) 10.17 & 89.70 \(\pm\) 5.10 & 91.70 \(\pm\) 7.01 & 93.73 \(\pm\) 5.61 \\
+        ICA centroid & 49.46 \(\pm\) 26.01 & 74.41 \(\pm\) 17.63 & 87.78 \(\pm\) 6.74 & 92.59 \(\pm\) 6.72 & \textbf{94.71} \(\pm\) 4.23 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{0.9}
+    \caption{Mean DIVA-HisDB \gls{fm} by pipeline, page selection, initialization, and \(k\).}
+    \label{tab:rq2-unet-random}\label{tab:rq2-unet-grayscale}\label{tab:rq2-unet-pca-maxmin}\label{tab:rq2-unet-pca-centroid}\label{tab:rq2-unet-ica-maxmin}\label{tab:rq2-unet-ica-centroid}\label{tab:rq2-twostage-random}\label{tab:rq2-twostage-grayscale}\label{tab:rq2-twostage-pca-maxmin}\label{tab:rq2-twostage-pca-centroid}\label{tab:rq2-twostage-ica-maxmin}\label{tab:rq2-twostage-ica-centroid}\label{tab:rq2-maskrcnn-random}\label{tab:rq2-maskrcnn-grayscale}\label{tab:rq2-maskrcnn-pca-maxmin}\label{tab:rq2-maskrcnn-pca-centroid}\label{tab:rq2-maskrcnn-ica-maxmin}\label{tab:rq2-maskrcnn-ica-centroid}
     \begin{tabular}{@{}llcccccc@{}}
         \toprule
         Selection & Initialization & \multicolumn{6}{c}{Training pages \(k\)} \\
         \cmidrule(l){3-8}
          & & 1 & 3 & 5 & 10 & 15 & 20 \\
+        \midrule
+        \multicolumn{8}{@{}l}{\emph{U-Net}} \\
         \midrule
         \multirow{3}{*}{Random} & ImageNet           & 62.76 & 89.32 & 90.60 & 92.91 & \textbf{92.58} & 95.03 \\
          & DINOv3 (LVD-1689M) & 66.11 & 90.22 & 94.93 & \textbf{93.08} & 70.75 & \textbf{95.76} \\
          & DINOv3 (cBAD)      & \textbf{86.42} & \textbf{95.61} & \textbf{97.58} & 90.05 & 92.12 & 91.99 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{3}{*}{Grayscale variance} & ImageNet           & \textbf{71.77} & 88.30 & 91.59 & \textbf{94.38} & 90.75 & 95.03 \\
          & DINOv3 (LVD-1689M) & 51.96 & \textbf{93.37} & 91.63 & 91.83 & \textbf{93.50} & \textbf{95.76} \\
          & DINOv3 (cBAD)      & 49.63 & 91.22 & \textbf{96.47} & 89.43 & 92.32 & 91.99 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{3}{*}{PCA max--min} & ImageNet           & 49.66 & 95.82 & 91.84 & 94.60 & 92.95 & 95.03 \\
          & DINOv3 (LVD-1689M) & 50.79 & 94.70 & \textbf{95.99} & \textbf{96.10} & 95.01 & \textbf{95.76} \\
          & DINOv3 (cBAD)      & \textbf{78.07} & \textbf{96.53} & 93.52 & 95.07 & \textbf{95.84} & 91.99 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{3}{*}{PCA centroid} & ImageNet           & 49.66 & 82.62 & \textbf{95.40} & \textbf{95.34} & 93.43 & 95.03 \\
          & DINOv3 (LVD-1689M) & 53.94 & \textbf{87.11} & 89.07 & 91.91 & 91.31 & \textbf{95.76} \\
          & DINOv3 (cBAD)      & \textbf{68.14} & 81.53 & 93.46 & 90.28 & \textbf{93.48} & 91.99 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{3}{*}{ICA max--min} & ImageNet           & 49.66 & 92.98 & 90.65 & 90.10 & 93.73 & 95.03 \\
          & DINOv3 (LVD-1689M) & 50.79 & 82.36 & 92.95 & \textbf{93.47} & 94.90 & \textbf{95.76} \\
          & DINOv3 (cBAD)      & \textbf{78.07} & \textbf{93.92} & \textbf{94.02} & 91.41 & \textbf{95.84} & 91.99 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{3}{*}{ICA centroid} & ImageNet           & 46.19 & 78.10 & 88.90 & 94.59 & 90.83 & 95.03 \\
          & DINOv3 (LVD-1689M) & \textbf{50.29} & \textbf{87.47} & 92.65 & 93.89 & \textbf{98.24} & \textbf{95.76} \\
          & DINOv3 (cBAD)      & 47.46 & 81.10 & \textbf{92.87} & \textbf{96.55} & 93.29 & 91.99 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-    \centering
-    \small
-    \setlength{\tabcolsep}{4pt}
-    \caption{RT-DETR + BBox U-Net: mean DIVA-HisDB \gls{fm} by page selection, initialization, and \(k\).}
-    \label{tab:rq2-twostage-random}\label{tab:rq2-twostage-grayscale}\label{tab:rq2-twostage-pca-maxmin}\label{tab:rq2-twostage-pca-centroid}\label{tab:rq2-twostage-ica-maxmin}\label{tab:rq2-twostage-ica-centroid}
-    \begin{tabular}{@{}llcccccc@{}}
-        \toprule
-        Selection & Initialization & \multicolumn{6}{c}{Training pages \(k\)} \\
-        \cmidrule(l){3-8}
-         & & 1 & 3 & 5 & 10 & 15 & 20 \\
         \midrule
-        \multirow{4}{*}{Random} & ImageNet           & 57.72 & 74.51 & 86.18 & \textbf{87.20} & 89.15 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 53.62 & 61.58 & 83.87 & 76.86 & 83.30 & 85.15 \\
+        \multicolumn{8}{@{}l}{\emph{RT-DETR + BBox U-Net}} \\
+        \midrule
+        \multirow{4}{*}{Random} & ImageNet           & 57.72 & 74.51 & 86.18 & 87.20 & 89.15 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 53.62 & 61.58 & 83.87 & 76.86 & 83.30 & 90.43 \\
          & DINOv3 (cBAD)      & 40.20 & 82.49 & 87.74 & 86.71 & 87.34 & 88.98 \\
-         & CATMuS             & \textbf{74.47} & \textbf{88.71} & \textbf{93.63} & 87.02 & \textbf{92.58} & \textbf{93.34} \\
-        \midrule
-        \multirow{4}{*}{Grayscale variance} & ImageNet           & 61.29 & 80.52 & 86.47 & 71.31 & 87.11 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 44.99 & 65.45 & 62.28 & 69.23 & 91.87 & 85.15 \\
+         & CATMuS             & \textbf{74.47} & \textbf{88.99} & \textbf{94.14} & \textbf{89.10} & \textbf{95.66} & \textbf{91.41} \\
+        \addlinespace[2pt]
+        \multirow{4}{*}{Grayscale variance} & ImageNet           & 61.29 & 80.52 & 86.47 & 71.31 & 87.11 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 44.99 & 65.45 & 62.28 & 69.23 & \textbf{91.87} & 90.43 \\
          & DINOv3 (cBAD)      & 60.72 & 79.10 & 81.45 & 75.45 & 88.48 & 88.98 \\
-         & CATMuS             & \textbf{74.70} & \textbf{87.68} & \textbf{91.61} & \textbf{91.95} & \textbf{95.10} & \textbf{93.34} \\
-        \midrule
-        \multirow{4}{*}{PCA max--min} & ImageNet           & 55.33 & 86.52 & 89.76 & 85.39 & 90.01 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 71.93 & 80.56 & 82.66 & 86.56 & 85.87 & 85.15 \\
+         & CATMuS             & \textbf{79.18} & \textbf{84.85} & \textbf{90.78} & \textbf{82.96} & 91.74 & \textbf{91.41} \\
+        \addlinespace[2pt]
+        \multirow{4}{*}{PCA max--min} & ImageNet           & 55.33 & 86.52 & 89.76 & 85.39 & 90.01 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 71.93 & 80.56 & 82.66 & 86.56 & 85.87 & 90.43 \\
          & DINOv3 (cBAD)      & 57.68 & 80.17 & 85.88 & 82.21 & 85.77 & 88.98 \\
-         & CATMuS             & \textbf{76.21} & \textbf{88.22} & \textbf{93.36} & \textbf{94.56} & \textbf{93.18} & \textbf{93.34} \\
-        \midrule
-        \multirow{4}{*}{PCA centroid} & ImageNet           & 50.54 & 73.68 & 77.86 & 85.56 & 89.22 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 64.93 & \textbf{85.30} & 72.86 & 75.04 & 93.38 & 85.15 \\
+         & CATMuS             & \textbf{77.50} & \textbf{89.55} & \textbf{94.18} & \textbf{92.38} & \textbf{91.16} & \textbf{91.41} \\
+        \addlinespace[2pt]
+        \multirow{4}{*}{PCA centroid} & ImageNet           & 50.54 & 73.68 & 77.86 & 85.56 & 89.22 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 64.93 & 85.30 & 72.86 & 75.04 & \textbf{93.38} & 90.43 \\
          & DINOv3 (cBAD)      & 61.67 & 80.45 & 80.20 & 86.47 & 89.44 & 88.98 \\
-         & CATMuS             & \textbf{67.60} & 80.28 & \textbf{87.94} & \textbf{92.93} & \textbf{94.76} & \textbf{93.34} \\
-        \midrule
-        \multirow{4}{*}{ICA max--min} & ImageNet           & 55.33 & 85.70 & 89.06 & 86.13 & 91.54 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 71.93 & 74.02 & 79.64 & 77.91 & 85.92 & 85.15 \\
+         & CATMuS             & \textbf{69.23} & \textbf{87.50} & \textbf{92.72} & \textbf{91.06} & 91.27 & \textbf{91.41} \\
+        \addlinespace[2pt]
+        \multirow{4}{*}{ICA max--min} & ImageNet           & 55.33 & 85.70 & 89.06 & 86.13 & 91.54 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 71.93 & 74.02 & 79.64 & 77.91 & 85.92 & 90.43 \\
          & DINOv3 (cBAD)      & 57.68 & 81.13 & 82.80 & 82.42 & 82.06 & 88.98 \\
-         & CATMuS             & \textbf{76.21} & \textbf{91.36} & \textbf{94.09} & \textbf{93.88} & \textbf{92.45} & \textbf{93.34} \\
-        \midrule
-        \multirow{4}{*}{ICA centroid} & ImageNet           & 51.64 & 71.14 & 82.58 & 83.82 & 90.24 & 91.18 \\
-         & DINOv3 (LVD-1689M) & 69.81 & 66.84 & 84.59 & 79.03 & 92.81 & 85.15 \\
+         & CATMuS             & \textbf{77.50} & \textbf{90.54} & \textbf{90.08} & \textbf{94.57} & \textbf{91.83} & \textbf{91.41} \\
+        \addlinespace[2pt]
+        \multirow{4}{*}{ICA centroid} & ImageNet           & 51.64 & 71.14 & 82.58 & 83.82 & 90.24 & 89.67 \\
+         & DINOv3 (LVD-1689M) & 69.81 & 66.84 & 84.59 & 79.03 & \textbf{92.81} & 90.43 \\
          & DINOv3 (cBAD)      & 61.28 & 76.42 & 80.29 & 87.69 & 89.81 & 88.98 \\
-         & CATMuS             & \textbf{70.55} & \textbf{76.64} & \textbf{93.12} & \textbf{91.01} & \textbf{93.70} & \textbf{93.34} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-    \centering
-    \small
-    \setlength{\tabcolsep}{4pt}
-    \caption{Mask R-CNN: mean DIVA-HisDB \gls{fm} by page selection, initialization, and \(k\).}
-    \label{tab:rq2-maskrcnn-random}\label{tab:rq2-maskrcnn-grayscale}\label{tab:rq2-maskrcnn-pca-maxmin}\label{tab:rq2-maskrcnn-pca-centroid}\label{tab:rq2-maskrcnn-ica-maxmin}\label{tab:rq2-maskrcnn-ica-centroid}
-    \begin{tabular}{@{}llcccccc@{}}
-        \toprule
-        Selection & Initialization & \multicolumn{6}{c}{Training pages \(k\)} \\
-        \cmidrule(l){3-8}
-         & & 1 & 3 & 5 & 10 & 15 & 20 \\
+         & CATMuS             & \textbf{74.05} & \textbf{83.42} & \textbf{92.18} & \textbf{89.41} & 90.00 & \textbf{91.41} \\
+        \midrule
+        \multicolumn{8}{@{}l}{\emph{Mask R-CNN}} \\
         \midrule
         \multirow{4}{*}{Random} & ImageNet           & 0.57 & 78.56 & 90.49 & 98.35 & 98.98 & 98.43 \\
          & DINOv3 (LVD-1689M) & 0.00 & 31.34 & 88.26 & 97.39 & \textbf{99.15} & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 47.76 & 84.76 & 91.08 & 97.85 & 98.43 & 98.87 \\
          & CATMuS             & \textbf{96.50} & \textbf{98.62} & \textbf{98.85} & \textbf{99.09} & 99.05 & 98.58 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{4}{*}{Grayscale variance} & ImageNet           & 12.71 & 78.45 & 92.27 & 96.75 & 98.68 & 98.43 \\
          & DINOv3 (LVD-1689M) & 0.87 & 32.21 & 89.56 & 96.21 & 98.81 & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 45.39 & 82.62 & 87.42 & 96.77 & 98.13 & 98.87 \\
          & CATMuS             & \textbf{93.76} & \textbf{96.32} & \textbf{96.64} & \textbf{97.00} & \textbf{99.33} & 98.58 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{4}{*}{PCA max--min} & ImageNet           & 12.71 & 79.44 & 89.02 & \textbf{99.36} & 98.45 & 98.43 \\
          & DINOv3 (LVD-1689M) & 2.12 & 41.06 & 81.53 & 96.44 & 98.76 & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 44.82 & 85.63 & 91.46 & 97.84 & 98.59 & 98.87 \\
          & CATMuS             & \textbf{94.13} & \textbf{98.75} & \textbf{98.47} & 99.16 & \textbf{99.22} & 98.58 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{4}{*}{PCA centroid} & ImageNet           & 12.71 & 80.30 & 87.43 & 98.67 & 99.31 & 98.43 \\
          & DINOv3 (LVD-1689M) & 0.00 & 14.43 & 76.88 & 97.47 & 98.76 & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 42.44 & 81.90 & 91.79 & 97.78 & 98.34 & 98.87 \\
          & CATMuS             & \textbf{93.30} & \textbf{97.52} & \textbf{98.62} & \textbf{99.43} & \textbf{99.32} & 98.58 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{4}{*}{ICA max--min} & ImageNet           & 12.71 & 81.70 & 88.45 & 98.45 & 98.39 & 98.43 \\
          & DINOv3 (LVD-1689M) & 2.12 & 61.99 & 88.78 & 97.09 & 98.76 & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 44.82 & 86.58 & 91.94 & 98.11 & 98.86 & 98.87 \\
          & CATMuS             & \textbf{94.13} & \textbf{98.35} & \textbf{98.28} & \textbf{99.08} & \textbf{99.16} & 98.58 \\
-        \midrule
+        \addlinespace[2pt]
         \multirow{4}{*}{ICA centroid} & ImageNet           & 12.71 & 72.22 & 87.92 & 98.66 & \textbf{99.50} & 98.43 \\
          & DINOv3 (LVD-1689M) & 0.00 & 27.70 & 74.82 & 97.56 & 99.08 & \textbf{99.21} \\
          & DINOv3 (cBAD)      & 39.96 & 76.56 & 90.24 & 98.15 & 98.71 & 98.87 \\
@@ -743,4 +791,29 @@ This appendix reports the mean DIVA-HisDB line \gls{fm} of every pipeline for ea
 \end{table}
 
 \FloatBarrier
+
+\chapter{WiSE-FT in Cross-Collection Transfer}
+\label{app:rq3-extra}\label{app:rq3-wiseft}
+
+Table~\ref{tab:rq3-wiseft} gives the single-collection transfer of the interpolated weights.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Effect of \gls{wiseft} on single-collection transfer (test pages, \gls{fm}). \(\alpha=0\): pretrained model; \(\alpha=1\): fine-tuned model.}
+    \label{tab:rq3-center-line-components}\label{tab:rq3-wiseft}
+    \footnotesize
+    \begin{tabular}{@{}lcccc@{}}
+        \toprule
+        & \multicolumn{2}{c}{Center-line model} & \multicolumn{2}{c}{Mask R-CNN} \\
+        \cmidrule(lr){2-3}\cmidrule(l){4-5}
+        \(\alpha\) & Mean transfer & Worst target & Mean transfer & Worst target \\
+        \midrule
+        0.00 & 93.07 & 84.22 & 49.09 & 0.07 \\
+        0.25 & \textbf{93.08} & 84.80 & 62.45 & 0.11 \\
+        0.50 & 92.74 & \textbf{85.13} & 68.91 & 8.13 \\
+        0.75 & 91.58 & 84.05 & \textbf{71.43} & 31.23 \\
+        1.00 & 87.70 & 81.52 & 70.55 & \textbf{45.49} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 

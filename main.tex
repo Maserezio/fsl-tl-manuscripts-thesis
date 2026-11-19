@@ -46,7 +46,7 @@
 \newcommand{\writenote}[1]{\todo[inline,color=orange!15,linecolor=orange!60]{\footnotesize\textbf{To write:} #1}}
 \newcommand{\revnote}[1]{\todo[inline,color=blue!8,linecolor=blue!50]{\footnotesize\textbf{Revise:} #1}}
 \newenvironment{rewrite}{\par\color{red!75!black}}{\par}  % text the author still has to rewrite
-\usetikzlibrary{positioning} % Enables relative node placement in diagrams.
+\usetikzlibrary{positioning,calc,fit,backgrounds} % Enables relative node placement in diagrams.
 \usepackage{morewrites} % Increases the number of external files that can be used.
 \usepackage[a-2b,mathxmp]{pdfx}      % Enables PDF/A compliance. Loads the package hyperref and has to be included second to last.
 \usepackage[acronym,toc]{glossaries} % Enables the generation of glossaries and lists of acronyms. This package has to be included last.
@@ -167,19 +167,11 @@
 \end{acknowledgements*}
 
 \begin{kurzfassung}
-    Text Line Segmentation ist ein Vorverarbeitungsschritt der historischen Dokumentanalyse vor der Texterkennung und beeinflusst deren Leistung direkt. Bei handschriftlichen historischen Manuskripten erschweren teure Annotationen, degradierte Bildqualität und variierende Schriftstile diese Aufgabe.
-
-    Diese Arbeit untersucht, welche Entwurfsentscheidung die Qualität der Text Line Segmentation bei wenigen annotierten Seiten bestimmt: die Modellarchitektur, ihr Feature Extractor und ihre Priors oder der Schritt, der Predictions in Zeilen überführt. Sie vergleicht Convolutional und transformerbasierte Encoder mit bis zu fünf Initialisierungen in zwei Paradigmen, Semantic Segmentation mit Postprocessing und Line Detection mit separater Line Segmentation, auf U-DIADS-TL und DIVA-HisDB. Zusätzlich untersucht sie, wie viele annotierte Seiten für eine mit dem State of the Art vergleichbare Leistung nötig sind, und evaluiert die Generalisierung über Manuskripte in beiden Paradigmen.
-
-    Die Ergebnisse zeigen, dass die Initialisierung wichtiger ist als die Architektur: Sie verändert die mittlere Line F-Measure um bis zu 23,3 Prozentpunkte, die Encoder-Familie um höchstens 6,5 Punkte. Supervised Pretraining auf großen annotierten Manuskriptsammlungen hat den stärksten Effekt: Mit einer annotierten Seite pro DIVA-HisDB-Manuskript erreicht es 96,5\,\%, verglichen mit veröffentlichten 97,4\,\% bei Training auf allen Seiten. Beim Transfer auf neue Sammlungen erreicht ein Center-Line-Modell aus dem Segmentation-Paradigma ohne Seiten der Zielsammlung im Mittel 91,7\,\% F-Measure, Mask R-CNN 44,3\,\%; trainiert auf je drei Seiten der übrigen sechs Sammlungen erreicht es 92,6\,\% gegenüber 85,4\,\% für Mask R-CNN.
+    Text Line Segmentation ist ein Vorverarbeitungsschritt der historischen Dokumentanalyse vor der Texterkennung, und ihre Qualität beeinflusst die Erkennungsleistung direkt. Bei handschriftlichen historischen Manuskripten erschweren fehlende annotierte Daten und variierende Schriftstile diese Aufgabe. Diese Arbeit untersucht, welcher Faktor die Qualität der Text Line Segmentation bestimmt, wenn nur wenige annotierte Seiten verfügbar sind: die Encoder-Architektur, ihre Initialisierung oder die Line Reconstruction, die Predictions in einzelne Zeilen überführt. Im Einzelnen vergleicht sie Convolutional und transformerbasierte Encoder mit verschiedenen Initialisierungen auf U-DIADS-TL und DIVA-HisDB. Der Vergleich umfasst zwei Paradigmen, Semantic Segmentation mit regelbasierter Zeilenextraktion und Line Detection mit Segmentierung innerhalb jeder erkannten Line Box. Zusätzlich untersucht sie, wie viele annotierte Seiten nötig sind, um den State of the Art zu erreichen, und evaluiert den Transfer auf unbekannte Manuskriptsammlungen. Die Ergebnisse zeigen, dass die Initialisierung wichtiger ist als die Architektur. Sie verändert die mittlere Line F-Measure um bis zu 22,3 Prozentpunkte, die Encoder-Familie um höchstens 6,2 Punkte. Supervised Pretraining auf großen annotierten Manuskriptsammlungen hat den stärksten Effekt. Auf U-DIADS-TL, das drei Trainingsseiten pro Manuskript bereitstellt, erreicht es im Mittel über drei Läufe 92,2\,\%, verglichen mit den besten veröffentlichten 83,0\,\%. Mit drei annotierten Seiten pro DIVA-HisDB-Manuskript erreicht es im Mittel über drei Läufe 98,7\,\%, verglichen mit veröffentlichten 97,4\,\% bei Training auf allen Seiten. Beim Transfer auf neue Sammlungen erreicht ein Center-Line-Modell aus dem Segmentation-Paradigma ohne Seiten der Zielsammlung im Mittel 93,1\,\% F-Measure. Trainiert auf je drei Seiten der übrigen sechs Sammlungen erreicht es 93,4\,\%.
 \end{kurzfassung}
 
 \begin{abstract}
-    Text line segmentation is a preprocessing step in historical document analysis, performed before text recognition, and its quality directly affects recognition performance. For handwritten ancient manuscripts, this task is more challenging due to the costs of annotated data, degraded image quality, and variability of writing styles.
-
-    This thesis examines which design determines text line segmentation quality with a few pages of data: the model architecture, its feature extractor and priors, or the step that turns predictions into lines. It compares convolutional and transformer-based encoders with up to five initializations in two paradigms: semantic segmentation followed by postprocessing, and line detection followed by separate line segmentation, on U-DIADS-TL and DIVA-HisDB, additionally investigating how many labeled pages are needed to achieve performance comparable to the state of the art. Finally, it evaluates model generalization across manuscripts in both paradigms.
-
-    The results demonstrate that initialization matters more than architecture: it changes the mean line F-measure by up to 23.3 percentage points, whereas the encoder family changes it by at most 6.5 points. Supervised pretraining on large annotated manuscript collections has the strongest effect. With one annotated page per DIVA-HisDB manuscript, it achieves 96.5\%, compared with 97.4\% published for training on all pages. In transfer to new collections, a center-line model from the segmentation paradigm reaches a mean F-measure of 91.7\% without any page of the target collection, compared with 44.3\% for Mask R-CNN; when trained on three pages from each of the other six collections, the two models reach 92.6\% and 85.4\%, respectively.
+    Text line segmentation is a preprocessing step in historical document analysis that precedes text recognition, and its quality directly affects recognition performance. For handwritten ancient manuscripts, this task is more challenging due to the lack of annotated data and variability of writing styles. This thesis examines which factor determines text line segmentation quality when only a few annotated pages are available: the encoder architecture, its initialization, or the line reconstruction that turns predictions into individual lines. In detail, it compares convolutional and transformer-based encoders with different initializations on U-DIADS-TL and DIVA-HisDB. The comparison covers two paradigms, semantic segmentation followed by rule-based line extraction, and line detection followed by segmentation inside each detected line box. Additionally, it investigates how many annotated pages are needed to reach the state of the art and evaluates the transfer to unseen manuscript collections. The results show that the initialization matters more than the architecture. It changes the mean line-level F-measure by up to 22.3 percentage points, and the encoder family changes it by at most 6.2 points. Supervised pretraining on large annotated manuscript collections has the strongest effect. On U-DIADS-TL, which provides three training pages per manuscript, it achieves 92.2\% on average over three runs, compared with the best published 83.0\%. With three annotated pages per DIVA-HisDB manuscript, it achieves 98.7\% on average over three runs, compared with 97.4\% published for training on all pages. In transfer to new collections, a center-line model from the segmentation paradigm reaches a mean F-measure of 93.1\% without any page of the target collection. When trained on three pages from each of the other six collections, it reaches 93.4\%.
 \end{abstract}
 
 % Select the language of the thesis, e.g., english or naustrian.
@@ -197,7 +189,6 @@
 \input{chapter4.tex}
 \input{chapter5.tex}
 \input{chapter6.tex}
-\input{chapter7.tex}
 
 \appendix
 \input{appendix.tex}
@@ -210,7 +201,8 @@
     The following AI tools were used during the thesis completion process:
 
     \begin{itemize}
-    	\item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): code generation and syntax checking.
+    	\item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): code generation, syntax checking, and grammar checking of the thesis text.
+        \item \textbf{Claude Code} (Anthropic): code generation, syntax checking, and grammar checking of the thesis text.
         \item \textbf{Grammarly}: spelling and grammar checking.
     \end{itemize}
 
@@ -221,7 +213,8 @@
     Folgende KI-Werkzeuge wurden bei der Erstellung der Arbeit verwendet:
 
     \begin{itemize}
-        \item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): Syntaxprüfung.
+        \item \textbf{ChatGPT (GPT-4, GPT-5)} (OpenAI): Codegenerierung, Syntaxprüfung und Grammatikprüfung des Textes.
+        \item \textbf{Claude Code} (Anthropic): Codegenerierung, Syntaxprüfung und Grammatikprüfung des Textes.
         \item \textbf{Grammarly}: Rechtschreib- und Grammatikprüfung.
     \end{itemize}
 
